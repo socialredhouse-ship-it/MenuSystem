@@ -320,7 +320,8 @@ Free maps, no API keys: Leaflet (served from `/vendor/leaflet`), OpenStreetMap t
 
 - **Cart:** the pick-up/delivery toggle is now two big outlined boxes: **Home Delivery** (left, selected when the page opens) and **Pick Up** (right). The customer's choice is kept while the page stays open.
 - **Edit the box texts:** Admin -> **Cart boxes**. Pick a language (English / Arabic / Urdu / Chinese), type the title and three lines of each box, and watch the live preview. The outline colour is there too. An empty field uses the built-in text. Stored in `site_settings` key `cart_boxes` (no SQL to run), served in `GET /api/config` as `cartBoxes`, saved with `GET/PUT /api/admin/cart-boxes`.
-- **Checkout:** the lines "Red House Trading", "Request type" and "Customer contact information" are removed; the map comes right after name and mobile number. For **Pick Up** the map shows the branch pin from Admin -> Contact (without a pin only the address is shown). "By continuing you agree to..." now appears on the card-payment step, as plain text.
+- **Checkout is two steps:** step 1 "Your order" (items, total, name, mobile, Next), step 2 a big map page (delivery pin + GPS + search + address, or the branch map for Pick Up) with the totals and the pay button; the back arrow goes from the map to step 1. The basket text is 17px and the whole basket scrolls as one page.
+- **Checkout (details):** the lines "Red House Trading", "Request type" and "Customer contact information" are removed; the map comes right after name and mobile number. For **Pick Up** the map shows the branch pin from Admin -> Contact (without a pin only the address is shown). "By continuing you agree to..." now appears on the card-payment step, as plain text.
 
 ## Delivery zone and checkout pin (08/11/2026)
 Home delivery is only accepted inside a delivery zone, and the customer proves where they are with a map pin. Free, no API keys, no new services (Leaflet and OpenStreetMap, as above).

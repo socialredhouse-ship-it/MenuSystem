@@ -384,8 +384,8 @@
   .qty-stepper .qty-val{min-width:16px; text-align:center; font-weight:700;}
 
   /* cart / order type toggle */
-  /* two big choice boxes: Home Delivery (left) and Pick Up (right). Sizes: title one step above the menu titles (22px), body text at the menu title size. */
-  .order-type{display:flex; gap:10px; padding:0 16px 14px; direction:ltr; --cb-color:var(--gold); --cb-title:calc(24px + var(--lang-add,0px)); --cb-body:calc(22px + var(--lang-add,0px));}
+  /* two big choice boxes: Home Delivery (left) and Pick Up (right). Title one step above the menu titles (22px); body text 17px so the ordered items stay visible on a phone. */
+  .order-type{display:flex; gap:10px; padding:0 16px 14px; direction:ltr; --cb-color:var(--gold); --cb-title:calc(24px + var(--lang-add,0px)); --cb-body:calc(17px + var(--lang-add,0px));}
   .choice-box{
     flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; text-align:center;
     border:5px solid var(--cb-color); border-radius:18px; background:var(--surface); color:var(--text);
@@ -399,7 +399,7 @@
   .choice-box .cb-line{font-size:var(--cb-body); font-weight:500; line-height:1.3;}
   .choice-box .cb-line:empty{display:none;}
 
-  .cart-list{padding:0 16px; flex:0 1 auto; min-height:0; max-height:42svh; overflow-y:auto;}
+  .cart-list{padding:0 16px; flex:0 0 auto;}   /* the whole basket scrolls as one page (the totals stay pinned at the bottom) */
   .cart-row{
     display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--line);
   }
@@ -471,7 +471,7 @@
 
   /* delivery location (pin + search) in the checkout */
   #pickupBlock[hidden]{display:none;}
-  #locBlock[hidden], .loc-btn[hidden], .loc-results[hidden], .loc-hint[hidden]{display:none;}
+  #locBlock[hidden], .loc-btn[hidden], .loc-btn.wide[hidden], .loc-results[hidden], .loc-hint[hidden]{display:none;}
   .loc-banner{border:1px solid var(--gold); background:rgba(227,178,60,.08); color:var(--text); border-radius:10px; padding:10px 12px; margin-bottom:10px; font-size:calc(13px + var(--lang-add,0px)); line-height:1.5;}
   .loc-banner.is-ok{border-color:#3fa56b; background:rgba(63,165,107,.14);}
   .loc-banner.is-bad{border-color:#d9534f; background:rgba(217,83,79,.14);}
@@ -488,6 +488,16 @@
   .loc-results .tag{display:block; margin-top:2px; font-size:calc(11px + var(--lang-add,0px)); font-weight:700;}
   .loc-results .tag.in{color:#3fa56b;}
   .loc-results .tag.out{color:#e0716d;}
+  /* checkout in two steps: 1 = your order + name + mobile, 2 = a big map page */
+  #checkoutDetails[data-step="1"] #coStep2, #checkoutDetails[data-step="2"] #coStep1{display:none;}
+  .co-items{margin:0 0 6px;}
+  .co-item{display:flex; justify-content:space-between; gap:12px; align-items:baseline; padding:10px 0; border-bottom:1px solid var(--line); font-size:calc(14px + var(--lang-add,0px));}
+  .co-item .co-name{font-weight:600; min-width:0; overflow-wrap:anywhere;}
+  .co-item .co-qty{color:var(--gold); font-weight:700; margin-inline-end:6px; white-space:nowrap;}
+  .co-item .co-price{color:var(--gold); font-weight:700; white-space:nowrap;}
+  #coStep2 #locMap, #coStep2 #pickupMap{height:clamp(300px, 48svh, 560px);}
+  #coStep2 .cart-summary{position:static;}   /* the map, GPS and search stay reachable; totals + pay follow below */
+  #coNextNote{margin:8px 0 0;}
   .loc-map{position:relative; z-index:0; isolation:isolate; height:260px; border-radius:12px; overflow:hidden; border:1px solid var(--line); margin-bottom:10px; background:#111;}
 
   /* ===== FLOATING chat/call ===== */
@@ -855,11 +865,23 @@
       <span style="width:38px;"></span>
     </div>
     <div class="checkout-body">
-      <div id="checkoutDetails">
-      <p class="field-label" id="nameLabel"></p>
-      <input class="field-input" id="checkoutName" type="text">
-      <p class="field-label" id="phoneLabel"></p>
-      <input class="field-input" id="checkoutPhone" type="tel" placeholder="+__ _________">
+      <div id="checkoutDetails" data-step="1">
+      <div id="coStep1">
+        <div class="co-items" id="coItems"></div>
+        <div class="summary-line final"><span id="coTotalLabel"></span><span id="coTotalVal"></span></div>
+        <p class="field-label" id="nameLabel"></p>
+        <input class="field-input" id="checkoutName" type="text">
+        <p class="field-label" id="phoneLabel"></p>
+        <input class="field-input" id="checkoutPhone" type="tel" placeholder="+__ _________">
+        <p class="field-label" id="paymentLabel"></p>
+        <div class="pay-method">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          <span id="paymentMethodText"></span>
+        </div>
+        <button class="primary-btn" id="coNextBtn" type="button"></button>
+        <p class="status-note" id="coNextNote"></p>
+      </div>
+      <div id="coStep2">
       <div id="pickupBlock" hidden>
         <p class="field-label" id="pickupMapLabel"></p>
         <div class="loc-map" id="pickupMap" dir="ltr"></div>
@@ -883,18 +905,13 @@
         <textarea class="field-textarea" id="checkoutAddress"></textarea>
       </div>
 
-      <p class="field-label" id="paymentLabel"></p>
-      <div class="pay-method">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-        <span id="paymentMethodText"></span>
-      </div>
-
       <div class="cart-summary" style="border:none; padding:18px 0 0;">
         <div class="summary-line"><span id="checkoutSubLabel"></span><span id="checkoutSubVal"></span></div>
         <div class="summary-line" id="checkoutDeliveryLine"><span id="checkoutDeliveryLabel"></span><span id="checkoutDeliveryVal"></span></div>
         <div class="summary-line final"><span id="checkoutTotalLabel"></span><span id="checkoutTotalVal"></span></div>
         <button class="primary-btn wa-btn" id="checkoutPayBtn"></button>
         <p class="status-note" id="checkoutStatusNote"></p>
+      </div>
       </div>
       </div>
       <div id="moyasarCheckout" hidden>
@@ -933,7 +950,7 @@ const STR = {
        cartEmptyTitle:'The basket is currently empty.', cartEmptyText:'Enjoy the most delicious meals and order now!',
        browseMenu:'Browse the menu', subtotal:'Subtotal:', deliveryFees:'Delivery fees:', finalTotal:'Final total:',
        completeOrder:'Complete your order now', addToCart:'Add to cart', calLabel:'Calories',
-       checkoutTitle:'Checkout', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
+       checkoutTitle:'Checkout', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
        fullName:'Full name:', fullNamePh:'Enter your name...', mobileNumber:'Mobile number (WhatsApp/call):',
        deliveryAddress:'Delivery address:', deliveryAddressPh:'Neighborhood, street, building/villa, apartment...',
        paymentMethod:'Payment method:', paymentProvider:'Secure card payment by Moyasar',
@@ -972,7 +989,7 @@ const STR = {
        cartEmptyTitle:'السلة فارغة حالياً.', cartEmptyText:'استمتع بألذ الأطباق واطلب وجبتك الآن!',
        browseMenu:'تصفح القائمة', subtotal:'المجموع الفرعي:', deliveryFees:'رسوم التوصيل:', finalTotal:'الإجمالي النهائي:',
        completeOrder:'أكمل طلبك الآن', addToCart:'أضف إلى السلة', calLabel:'سعرة حرارية',
-       checkoutTitle:'إتمام الطلب', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
+       checkoutTitle:'إتمام الطلب', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
        fullName:'الاسم الكامل:', fullNamePh:'أدخل اسمك...', mobileNumber:'رقم الجوال (واتساب/اتصال):',
        deliveryAddress:'عنوان التوصيل:', deliveryAddressPh:'الحي، الشارع، رقم المبنى/الفيلا، الشقة...',
        paymentMethod:'طريقة الدفع:', paymentProvider:'دفع آمن بالبطاقة عبر Moyasar',
@@ -1011,7 +1028,7 @@ const STR = {
        cartEmptyTitle:'ٹوکری اس وقت خالی ہے۔', cartEmptyText:'لذیذ کھانوں سے لطف اٹھائیں اور ابھی آرڈر کریں!',
        browseMenu:'مینو دیکھیں', subtotal:'ذیلی مجموعہ:', deliveryFees:'ڈیلیوری فیس:', finalTotal:'حتمی رقم:',
        completeOrder:'ابھی آرڈر مکمل کریں', addToCart:'کارٹ میں شامل کریں', calLabel:'کیلوریز',
-       checkoutTitle:'چیک آؤٹ', pickupMapLabel:'نقشے پر ہماری برانچ', pickupMapFailed:'نقشہ لوڈ نہیں ہو سکا۔',
+       checkoutTitle:'چیک آؤٹ', coStep1Title:'آپ کا آرڈر', coStep2Title:'آپ کا مقام', coStep2PickupTitle:'ہماری برانچ کا مقام', coNext:'اگلا', coTotal:'کل:', pickupMapLabel:'نقشے پر ہماری برانچ', pickupMapFailed:'نقشہ لوڈ نہیں ہو سکا۔',
        fullName:'پورا نام:', fullNamePh:'اپنا نام درج کریں...', mobileNumber:'موبائل نمبر (واٹس ایپ/کال):',
        deliveryAddress:'ڈیلیوری پتہ:', deliveryAddressPh:'محلہ، گلی، عمارت/ولا نمبر، اپارٹمنٹ...',
        paymentMethod:'ادائیگی کا طریقہ:', paymentProvider:'Moyasar کے ذریعے محفوظ کارڈ ادائیگی',
@@ -1050,7 +1067,7 @@ const STR = {
        cartEmptyTitle:'购物车当前为空。', cartEmptyText:'尽享美味佳肴，现在就下单吧！',
        browseMenu:'浏览菜单', subtotal:'小计：', deliveryFees:'配送费：', finalTotal:'总计：',
        completeOrder:'立即完成订单', addToCart:'加入购物车', calLabel:'卡路里',
-       checkoutTitle:'结账', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
+       checkoutTitle:'结账', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
        fullName:'姓名：', fullNamePh:'请输入您的姓名…', mobileNumber:'手机号码（WhatsApp/通话）：',
        deliveryAddress:'送货地址：', deliveryAddressPh:'小区、街道、楼栋/别墅号、公寓号…',
        paymentMethod:'付款方式：', paymentProvider:'通过 Moyasar 安全银行卡付款',
@@ -2640,8 +2657,44 @@ document.getElementById('locSearchBtn').addEventListener('click', searchAddress)
 document.getElementById('locSearchInput').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); searchAddress(); } });
 document.getElementById('locPickupBtn').addEventListener('click', switchToPickup);
 
+/* ---- the two checkout steps ---- */
+let checkoutStep = 1;
+function renderCheckoutItems(){
+  document.getElementById('coItems').innerHTML = cartLines().map(l=>`
+    <div class="co-item"><span class="co-name"><span class="co-qty">${l.qty} ×</span>${escapeHtml(l.item.name[lang] || '')}</span><span class="co-price">${moneyHtml(l.lineTotal)}</span></div>`).join('');
+  document.getElementById('coTotalLabel').textContent = STR[lang].coTotal;
+  setMoney(document.getElementById('coTotalVal'), cartTotal());
+}
+function setCheckoutStep(step){
+  checkoutStep = step;
+  document.getElementById('checkoutDetails').dataset.step = String(step);
+  document.getElementById('checkoutTitle').textContent = step === 1 ? STR[lang].coStep1Title : (orderType === 'delivery' ? STR[lang].coStep2Title : STR[lang].coStep2PickupTitle);
+  const body = document.querySelector('#checkoutOverlay .checkout-body');
+  checkoutOverlay.scrollTop = 0; if(body) body.scrollTop = 0;
+  if(step === 2){
+    initLocation();   // the map container is visible now, so it gets its real size
+    setTimeout(()=>{ if(locMap) locMap.invalidateSize(); if(pickupMap) pickupMap.invalidateSize(); }, 120);
+  }
+}
+document.getElementById('coNextBtn').addEventListener('click', ()=>{
+  const missing = ['checkoutName','checkoutPhone'].filter(id => !document.getElementById(id).value.trim());
+  clearCheckoutFieldErrors();
+  if(missing.length){
+    missing.forEach(markCheckoutFieldInvalid);
+    document.getElementById('coNextNote').textContent = STR[lang].detailsRequired;
+    const first = document.getElementById(missing[0]);
+    first.scrollIntoView({ block:'center', behavior:'smooth' });
+    first.focus({ preventScroll:true });
+    return;
+  }
+  document.getElementById('coNextNote').textContent = '';
+  setCheckoutStep(2);
+});
+
 function refreshCheckoutStaticText(){
-  document.getElementById('checkoutTitle').textContent = STR[lang].checkoutTitle;
+  document.getElementById('checkoutTitle').textContent = checkoutStep === 1 ? STR[lang].coStep1Title : (orderType === 'delivery' ? STR[lang].coStep2Title : STR[lang].coStep2PickupTitle);
+  document.getElementById('coNextBtn').textContent = STR[lang].coNext;
+  renderCheckoutItems();
   document.getElementById('nameLabel').textContent = STR[lang].fullName;
   document.getElementById('checkoutName').placeholder = STR[lang].fullNamePh;
   document.getElementById('phoneLabel').textContent = STR[lang].mobileNumber;
@@ -2685,10 +2738,13 @@ function openCheckout(){
   }
   refreshCheckoutOrderType();
   document.getElementById('checkoutStatusNote').textContent = '';
+  document.getElementById('coNextNote').textContent = '';
   openOverlay(checkoutOverlay);
-  initLocation();   // after the overlay is visible, so the map gets its real size
+  setCheckoutStep(1);   // step 2 (the map) starts when the customer taps Next
 }
 document.getElementById('checkoutBack').addEventListener('click', ()=>{
+  const paying = !document.getElementById('moyasarCheckout').hidden;
+  if(checkoutStep === 2 && !paying && !checkoutOverlay.dataset.submitting){ setCheckoutStep(1); return; }   // back from the map to the order page
   invalidateMoyasarInit();
   closeOverlay(checkoutOverlay);
   openCart();
@@ -2860,7 +2916,7 @@ function clearCheckoutFieldError(id){
   field.classList.remove('field-invalid');
   field.removeAttribute('aria-invalid');
   document.getElementById(`${id}Error`)?.remove();
-  if(!document.querySelector('.field-invalid')) document.getElementById('checkoutStatusNote').textContent = '';
+  if(!document.querySelector('.field-invalid')){ document.getElementById('checkoutStatusNote').textContent = ''; document.getElementById('coNextNote').textContent = ''; }
 }
 function clearCheckoutFieldErrors(){
   REQUIRED_CHECKOUT_FIELDS.forEach(clearCheckoutFieldError);
@@ -2895,6 +2951,10 @@ document.getElementById('checkoutPayBtn').addEventListener('click', async ()=>{
   if(missingFields.length){
     missingFields.forEach(markCheckoutFieldInvalid);
     statusNote.textContent = STR[lang].detailsRequired;
+    if(missingFields.some(id => id !== 'checkoutAddress')){   // name / mobile live on step 1
+      setCheckoutStep(1);
+      document.getElementById('coNextNote').textContent = STR[lang].detailsRequired;
+    }
     const firstMissing = document.getElementById(missingFields[0]);
     firstMissing.scrollIntoView({ block:'center', behavior:'smooth' });
     firstMissing.focus({ preventScroll:true });
