@@ -156,6 +156,9 @@ app.get('/api/config', async (req, res) => {
     // map tiles for the admin pin picker and the tracking page (free OpenStreetMap tiles unless you set your own)
     mapTileUrl: process.env.MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     mapAttribution: process.env.MAP_TILE_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    // Geoapify key for the optional "Map (English)" layer on the English menu. Browser-side by design (Geoapify keys are
+    // meant for web pages), so restrict it to your domain in the Geoapify dashboard. Empty = the OpenFreeMap English map.
+    geoapifyKey: (process.env.GEOAPIFY_API_KEY || '').trim(),
     // where home delivery is allowed; the checkout draws it and gives instant feedback, POST /api/orders enforces it
     // texts + outline colour of the two big cart boxes (Admin -> Cart boxes); built-in texts where nothing is saved
     cartBoxes: await cartBoxes.getCartBoxes().catch(() => cartBoxes.merge(null)),

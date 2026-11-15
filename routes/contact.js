@@ -42,6 +42,27 @@ function toWaNumber(raw) {
 const MAX_ADDRESS_LENGTH = 300;
 const MAP_URL_PATTERN = /^https:\/\/[^\s]{4,300}$/i;
 
+// The location button must open Google Maps in each customer's own phone language, so a language
+// parameter (?hl=ar, ?hl=en, ...) is removed from the saved map link. Other parameters stay as they are.
+const LANGUAGE_PARAMS = new Set(['hl', 'lang', 'language']);
+
+function safeDecode(text) {
+  try { return decodeURIComponent(text); } catch (e) { return text; }
+}
+
+function stripLanguageParams(raw) {
+  const text = String(raw || '').trim();
+  let url;
+  try { url = new URL(text); } catch (e) { return text; }
+  if (!url.search) return text;
+  const pairs = url.search.slice(1).split('&');
+  const kept = pairs.filter((pair) => !LANGUAGE_PARAMS.has(safeDecode(pair.split('=')[0]).toLowerCase()));
+  if (kept.length === pairs.length) return text;   // nothing to remove: keep the link exactly as typed
+  const rest = kept.filter(Boolean);
+  url.search = rest.length ? `?${rest.join('&')}` : '';
+  return url.toString();
+}
+
 function isMissingTable(error) {
   // 42P01 = Postgres undefined_table, PGRST205 = PostgREST schema-cache miss
   return error && (error.code === '42P01' || error.code === 'PGRST205');
@@ -67,7 +88,8 @@ async function readContact() {
     phone2: typeof value.phone2 === 'string' ? value.phone2 : DEFAULT_CONTACT.phone2,
     orderPhone: typeof value.orderPhone === 'string' ? value.orderPhone : DEFAULT_CONTACT.orderPhone,
     address: typeof value.address === 'string' ? value.address : DEFAULT_CONTACT.address,
-    mapUrl: typeof value.mapUrl === 'string' ? value.mapUrl : DEFAULT_CONTACT.mapUrl,
+    // a link saved earlier with ?hl=... is cleaned here too, so it works without being saved again
+    mapUrl: stripLanguageParams(typeof value.mapUrl === 'string' ? value.mapUrl : DEFAULT_CONTACT.mapUrl),
     lat: pin ? pin.lat : null,
     lng: pin ? pin.lng : null,
   };
@@ -132,6 +154,7 @@ router.put('/admin/contact', requireAdmin, async (req, res) => {
   if (mapUrl && !MAP_URL_PATTERN.test(mapUrl)) {
     return res.status(400).json({ error: 'Map link must be a full https:// link.' });
   }
+  mapUrl = stripLanguageParams(mapUrl);   // no forced language: every customer sees the map in their own phone language
   if (!address && !mapUrl && !pin) {
     return res.status(400).json({ error: 'Enter an address or a map link.' });
   }
@@ -157,5 +180,6 @@ router.put('/admin/contact', requireAdmin, async (req, res) => {
 router.getOrderWhatsapp = getOrderWhatsapp;
 router.getRestaurantLocation = getRestaurantLocation;
 router.toWaNumber = toWaNumber;
+router.stripLanguageParams = stripLanguageParams;
 
 module.exports = router;

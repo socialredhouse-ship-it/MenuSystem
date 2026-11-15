@@ -1735,6 +1735,7 @@ let CART_BOXES = null;          // texts + outline colour of the two big cart bo
 let DELIVERY_ZONE = { enforced:false, center:null, geometry:null };   // overwritten by loadConfig(): where home delivery is allowed
 let MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 let MAP_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+let GEOAPIFY_KEY = '';          // overwritten by loadConfig(); empty = the English map uses OpenFreeMap
 const PENDING_PAYMENT_KEY = 'redhouse_pending_payment';
 
 async function loadConfig(){
@@ -1759,6 +1760,7 @@ async function loadConfig(){
     if(cfg.cartBoxes && typeof cfg.cartBoxes === 'object') CART_BOXES = cfg.cartBoxes;
     MAP_TILE_URL = cfg.mapTileUrl || MAP_TILE_URL;
     if(cfg.mapAttribution !== undefined) MAP_ATTRIBUTION = cfg.mapAttribution;
+    GEOAPIFY_KEY = typeof cfg.geoapifyKey === 'string' ? cfg.geoapifyKey.trim() : '';
     CONFIG_LOADED = true;
   }catch(err){
     console.error('Failed to load server config:', err);
@@ -2550,14 +2552,30 @@ function englishLabelStyle(style){
   });
   return style;
 }
+/* Geoapify (osm-bright style, same OpenMapTiles label fields) is used when the server has a GEOAPIFY_API_KEY.
+   If it can not be reached the OpenFreeMap English map is used, and if that fails too the normal map comes back. */
+const GEOAPIFY_STYLE_URL = 'https://maps.geoapify.com/v1/styles/osm-bright/style.json';
+const GEOAPIFY_ATTRIBUTION = '<a href="https://www.geoapify.com/" target="_blank" rel="noopener">Powered by Geoapify</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+async function fetchEnglishStyle(){
+  if(GEOAPIFY_KEY){
+    try{
+      const res = await fetch(`${GEOAPIFY_STYLE_URL}?apiKey=${encodeURIComponent(GEOAPIFY_KEY)}`);
+      if(!res.ok) throw new Error('Geoapify style request failed: ' + res.status);
+      return { style:englishLabelStyle(await res.json()), attribution:GEOAPIFY_ATTRIBUTION };
+    }catch(err){
+      console.error('Geoapify map not available, using OpenFreeMap instead:', err);
+    }
+  }
+  const res = await fetch(EN_STYLE_URL);
+  if(!res.ok) throw new Error('Style request failed: ' + res.status);
+  return { style:englishLabelStyle(await res.json()), attribution:EN_ATTRIBUTION };
+}
 async function loadEnglishLayer(entry){
   try{
     await loadMapLibre();
-    const res = await fetch(EN_STYLE_URL);
-    if(!res.ok) throw new Error('Style request failed: ' + res.status);
-    const style = englishLabelStyle(await res.json());
+    const { style, attribution } = await fetchEnglishStyle();
     if(!entry.map.hasLayer(entry.en)) return;   // the customer already switched to another layer
-    const gl = window.MaplibreGLLeaflet.maplibreGL({ style, attributionControl:{ customAttribution:EN_ATTRIBUTION } });
+    const gl = window.MaplibreGLLeaflet.maplibreGL({ style, attributionControl:{ customAttribution:attribution } });
     entry.en.addLayer(gl);
     entry.enGl = gl;
   }catch(err){
