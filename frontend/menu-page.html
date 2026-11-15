@@ -498,6 +498,14 @@
   #coStep2 #locMap, #coStep2 #pickupMap{height:clamp(300px, 48svh, 560px);}
   #coStep2 .cart-summary{position:static;}   /* the map, GPS and search stay reachable; totals + pay follow below */
   #coNextNote{margin:8px 0 0;}
+  .co-item .co-del{background:none; border:none; color:var(--muted); cursor:pointer; padding:6px; margin-inline-end:4px; flex-shrink:0; align-self:center; border-radius:8px;}
+  .co-item .co-del:hover, .co-item .co-del:focus-visible{color:#e0716d;}
+  .co-item .co-del svg{width:19px; height:19px; display:block;}
+  .co-item .co-main{display:flex; align-items:baseline; gap:6px; min-width:0; flex:1;}
+  .bistro-pin{display:flex; flex-direction:column; align-items:center; gap:2px; pointer-events:none;}
+  .bistro-pin svg{width:30px; height:30px; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
+  .bistro-pin b{font:700 12px/1.2 'Poppins',system-ui,sans-serif; color:#fff; background:#b3261e; border-radius:999px; padding:2px 8px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.5);}
+  .leaflet-control-layers{font-family:inherit;}
   .loc-map{position:relative; z-index:0; isolation:isolate; height:260px; border-radius:12px; overflow:hidden; border:1px solid var(--line); margin-bottom:10px; background:#111;}
 
   /* ===== FLOATING chat/call ===== */
@@ -950,7 +958,7 @@ const STR = {
        cartEmptyTitle:'The basket is currently empty.', cartEmptyText:'Enjoy the most delicious meals and order now!',
        browseMenu:'Browse the menu', subtotal:'Subtotal:', deliveryFees:'Delivery fees:', finalTotal:'Final total:',
        completeOrder:'Complete your order now', addToCart:'Add to cart', calLabel:'Calories',
-       checkoutTitle:'Checkout', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
+       checkoutTitle:'Checkout', removeMeal:'Remove this meal', mapLayerMap:'Map', mapLayerSat:'Satellite', bistroLabel:'Our bistro', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
        fullName:'Full name:', fullNamePh:'Enter your name...', mobileNumber:'Mobile number (WhatsApp/call):',
        deliveryAddress:'Delivery address:', deliveryAddressPh:'Neighborhood, street, building/villa, apartment...',
        paymentMethod:'Payment method:', paymentProvider:'Secure card payment by Moyasar',
@@ -989,7 +997,7 @@ const STR = {
        cartEmptyTitle:'السلة فارغة حالياً.', cartEmptyText:'استمتع بألذ الأطباق واطلب وجبتك الآن!',
        browseMenu:'تصفح القائمة', subtotal:'المجموع الفرعي:', deliveryFees:'رسوم التوصيل:', finalTotal:'الإجمالي النهائي:',
        completeOrder:'أكمل طلبك الآن', addToCart:'أضف إلى السلة', calLabel:'سعرة حرارية',
-       checkoutTitle:'إتمام الطلب', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
+       checkoutTitle:'إتمام الطلب', removeMeal:'حذف هذه الوجبة', mapLayerMap:'خريطة', mapLayerSat:'قمر صناعي', bistroLabel:'مطعمنا', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
        fullName:'الاسم الكامل:', fullNamePh:'أدخل اسمك...', mobileNumber:'رقم الجوال (واتساب/اتصال):',
        deliveryAddress:'عنوان التوصيل:', deliveryAddressPh:'الحي، الشارع، رقم المبنى/الفيلا، الشقة...',
        paymentMethod:'طريقة الدفع:', paymentProvider:'دفع آمن بالبطاقة عبر Moyasar',
@@ -1028,7 +1036,7 @@ const STR = {
        cartEmptyTitle:'ٹوکری اس وقت خالی ہے۔', cartEmptyText:'لذیذ کھانوں سے لطف اٹھائیں اور ابھی آرڈر کریں!',
        browseMenu:'مینو دیکھیں', subtotal:'ذیلی مجموعہ:', deliveryFees:'ڈیلیوری فیس:', finalTotal:'حتمی رقم:',
        completeOrder:'ابھی آرڈر مکمل کریں', addToCart:'کارٹ میں شامل کریں', calLabel:'کیلوریز',
-       checkoutTitle:'چیک آؤٹ', coStep1Title:'آپ کا آرڈر', coStep2Title:'آپ کا مقام', coStep2PickupTitle:'ہماری برانچ کا مقام', coNext:'اگلا', coTotal:'کل:', pickupMapLabel:'نقشے پر ہماری برانچ', pickupMapFailed:'نقشہ لوڈ نہیں ہو سکا۔',
+       checkoutTitle:'چیک آؤٹ', removeMeal:'یہ کھانا ہٹائیں', mapLayerMap:'نقشہ', mapLayerSat:'سیٹلائٹ', bistroLabel:'ہمارا بسٹرو', coStep1Title:'آپ کا آرڈر', coStep2Title:'آپ کا مقام', coStep2PickupTitle:'ہماری برانچ کا مقام', coNext:'اگلا', coTotal:'کل:', pickupMapLabel:'نقشے پر ہماری برانچ', pickupMapFailed:'نقشہ لوڈ نہیں ہو سکا۔',
        fullName:'پورا نام:', fullNamePh:'اپنا نام درج کریں...', mobileNumber:'موبائل نمبر (واٹس ایپ/کال):',
        deliveryAddress:'ڈیلیوری پتہ:', deliveryAddressPh:'محلہ، گلی، عمارت/ولا نمبر، اپارٹمنٹ...',
        paymentMethod:'ادائیگی کا طریقہ:', paymentProvider:'Moyasar کے ذریعے محفوظ کارڈ ادائیگی',
@@ -1067,7 +1075,7 @@ const STR = {
        cartEmptyTitle:'购物车当前为空。', cartEmptyText:'尽享美味佳肴，现在就下单吧！',
        browseMenu:'浏览菜单', subtotal:'小计：', deliveryFees:'配送费：', finalTotal:'总计：',
        completeOrder:'立即完成订单', addToCart:'加入购物车', calLabel:'卡路里',
-       checkoutTitle:'结账', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
+       checkoutTitle:'结账', removeMeal:'删除此餐点', mapLayerMap:'地图', mapLayerSat:'卫星', bistroLabel:'我们的餐厅', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
        fullName:'姓名：', fullNamePh:'请输入您的姓名…', mobileNumber:'手机号码（WhatsApp/通话）：',
        deliveryAddress:'送货地址：', deliveryAddressPh:'小区、街道、楼栋/别墅号、公寓号…',
        paymentMethod:'付款方式：', paymentProvider:'通过 Moyasar 安全银行卡付款',
@@ -2501,12 +2509,39 @@ function loadLeaflet(){
   return locLeafletPromise;
 }
 
+/* Base layers: street map (the configured tiles, OpenStreetMap by default) + free Esri satellite imagery, and the bistro marker. */
+const SAT_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const SAT_ATTRIBUTION = 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+const mapLayerControls = [];   // { map, street, sat, control } so the labels can follow the language
+function addBaseLayers(map){
+  const opts = { maxZoom:19, referrerPolicy:'strict-origin-when-cross-origin' };
+  const street = L.tileLayer(MAP_TILE_URL, { ...opts, attribution:MAP_ATTRIBUTION }).addTo(map);
+  const sat = L.tileLayer(SAT_TILE_URL, { ...opts, attribution:SAT_ATTRIBUTION });
+  const entry = { map, street, sat, control:null };
+  mapLayerControls.push(entry);
+  labelMapLayers(entry);
+}
+function labelMapLayers(entry){
+  if(entry.control) entry.control.remove();
+  entry.control = L.control.layers({ [STR[lang].mapLayerMap]:entry.street, [STR[lang].mapLayerSat]:entry.sat }, null, { collapsed:false, position:'topright' }).addTo(entry.map);
+}
+function relabelMapLayers(){ if(window.L && window.L.control) mapLayerControls.forEach(labelMapLayers); }
+function addBistroMarker(map){
+  if(CONTACT.lat == null || CONTACT.lng == null) return null;
+  const icon = L.divIcon({
+    className:'', iconSize:[96, 52], iconAnchor:[48, 46],
+    html:`<div class="bistro-pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 2.5 11h2.7v9.5h5.6v-6h2.4v6h5.6V11h2.7z" fill="#e53935" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg><b>${escapeHtml(STR[lang].bistroLabel)}</b></div>`
+  });
+  return L.marker([CONTACT.lat, CONTACT.lng], { icon, interactive:false, keyboard:false, zIndexOffset:-500 }).addTo(map);
+}
+
 async function ensureLocMap(){
   await loadLeaflet();
   if(locMap){ setTimeout(()=>locMap.invalidateSize(), 120); return locMap; }
   const c = DELIVERY_ZONE.center || { lat:21.524, lng:39.171 };
   locMap = L.map('locMap', { center:[c.lat, c.lng], zoom:15, scrollWheelZoom:false });
-  L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_ATTRIBUTION, referrerPolicy:'strict-origin-when-cross-origin' }).addTo(locMap);
+  addBaseLayers(locMap);
+  addBistroMarker(locMap);
   if(DELIVERY_ZONE.geometry){
     const zoneLayer = L.geoJSON(DELIVERY_ZONE.geometry, { style:{ color:'#1e73ff', weight:2, fillOpacity:.08 }, interactive:false }).addTo(locMap);
     try{ locMap.fitBounds(zoneLayer.getBounds(), { padding:[12, 12] }); }catch(e){ /* keep the default view */ }
@@ -2621,8 +2656,8 @@ function renderPickupBlock(){
     if(orderType !== 'pickup') return;
     if(!pickupMap){
       pickupMap = L.map('pickupMap', { center:[CONTACT.lat, CONTACT.lng], zoom:16, scrollWheelZoom:false });
-      L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_ATTRIBUTION, referrerPolicy:'strict-origin-when-cross-origin' }).addTo(pickupMap);
-      L.marker([CONTACT.lat, CONTACT.lng]).addTo(pickupMap);
+      addBaseLayers(pickupMap);
+      addBistroMarker(pickupMap);
     }
     pickupMap.setView([CONTACT.lat, CONTACT.lng], 16);
     setTimeout(()=>pickupMap.invalidateSize(), 120);
@@ -2661,7 +2696,21 @@ document.getElementById('locPickupBtn').addEventListener('click', switchToPickup
 let checkoutStep = 1;
 function renderCheckoutItems(){
   document.getElementById('coItems').innerHTML = cartLines().map(l=>`
-    <div class="co-item"><span class="co-name"><span class="co-qty">${l.qty} ×</span>${escapeHtml(l.item.name[lang] || '')}</span><span class="co-price">${moneyHtml(l.lineTotal)}</span></div>`).join('');
+    <div class="co-item" data-id="${l.item.id}">
+      <button type="button" class="co-del" data-action="co-remove" aria-label="${escapeHtml(STR[lang].removeMeal)}" title="${escapeHtml(STR[lang].removeMeal)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0 1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+      <span class="co-main"><span class="co-qty">${l.qty} ×</span><span class="co-name">${escapeHtml(l.item.name[lang] || '')}</span></span>
+      <span class="co-price">${moneyHtml(l.lineTotal)}</span>
+    </div>`).join('');
+  document.querySelectorAll('#coItems [data-action="co-remove"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      cartSet(Number(btn.closest('.co-item').dataset.id), 0);
+      if(!cartLines().length){ invalidateMoyasarInit(); closeOverlay(checkoutOverlay); renderCart(); openCart(); return; }   // nothing left to order: back to the (empty) basket
+      renderCart();
+      refreshCheckoutOrderType();
+      renderCheckoutItems();
+      document.getElementById('checkoutPayBtn').innerHTML = `${escapeHtml(STR[lang].payBtn)} · ${moneyHtml(cartTotal())}`;
+    });
+  });
   document.getElementById('coTotalLabel').textContent = STR[lang].coTotal;
   setMoney(document.getElementById('coTotalVal'), cartTotal());
 }
@@ -2715,6 +2764,7 @@ function refreshCheckoutStaticText(){
     document.getElementById('checkoutPayBtn').innerHTML = `${escapeHtml(STR[lang].payBtn)} · ${moneyHtml(cartTotal())}`;
   }
   renderLocation();   // map block texts + pay button lock
+  relabelMapLayers();
   if(checkoutOverlay.classList.contains('is-open')) renderPickupBlock();   // language switch while the checkout is open
 }
 // The parts of the checkout that depend on pick-up vs home delivery.
