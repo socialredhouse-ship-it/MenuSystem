@@ -17,6 +17,7 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "leaflet": "^1.9.4",
+    "leaflet.gridlayer.googlemutant": "^0.16.0",
     "maplibre-gl": "^4.7.1",
     "multer": "^2.4.0"
   }

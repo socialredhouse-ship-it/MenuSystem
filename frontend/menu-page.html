@@ -958,7 +958,7 @@ const STR = {
        cartEmptyTitle:'The basket is currently empty.', cartEmptyText:'Enjoy the most delicious meals and order now!',
        browseMenu:'Browse the menu', subtotal:'Subtotal:', deliveryFees:'Delivery fees:', finalTotal:'Final total:',
        completeOrder:'Complete your order now', addToCart:'Add to cart', calLabel:'Calories',
-       checkoutTitle:'Checkout', mapLayerEn:'Map (English)', removeMeal:'Remove this meal', mapLayerMap:'Map', mapLayerSat:'Satellite', bistroLabel:'Our bistro', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
+       checkoutTitle:'Checkout', mapLayerEn:'Map (English)', mapLayerGoogle:'Google Maps', removeMeal:'Remove this meal', mapLayerMap:'Map', mapLayerSat:'Satellite', bistroLabel:'Our bistro', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
        fullName:'Full name:', fullNamePh:'Enter your name...', mobileNumber:'Mobile number (WhatsApp/call):',
        deliveryAddress:'Delivery address:', deliveryAddressPh:'Neighborhood, street, building/villa, apartment...',
        paymentMethod:'Payment method:', paymentProvider:'Secure card payment by Moyasar',
@@ -997,7 +997,7 @@ const STR = {
        cartEmptyTitle:'السلة فارغة حالياً.', cartEmptyText:'استمتع بألذ الأطباق واطلب وجبتك الآن!',
        browseMenu:'تصفح القائمة', subtotal:'المجموع الفرعي:', deliveryFees:'رسوم التوصيل:', finalTotal:'الإجمالي النهائي:',
        completeOrder:'أكمل طلبك الآن', addToCart:'أضف إلى السلة', calLabel:'سعرة حرارية',
-       checkoutTitle:'إتمام الطلب', mapLayerEn:'Map (English)', removeMeal:'حذف هذه الوجبة', mapLayerMap:'خريطة', mapLayerSat:'قمر صناعي', bistroLabel:'مطعمنا', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
+       checkoutTitle:'إتمام الطلب', mapLayerEn:'Map (English)', mapLayerGoogle:'خرائط Google', removeMeal:'حذف هذه الوجبة', mapLayerMap:'خريطة', mapLayerSat:'قمر صناعي', bistroLabel:'مطعمنا', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
        fullName:'الاسم الكامل:', fullNamePh:'أدخل اسمك...', mobileNumber:'رقم الجوال (واتساب/اتصال):',
        deliveryAddress:'عنوان التوصيل:', deliveryAddressPh:'الحي، الشارع، رقم المبنى/الفيلا، الشقة...',
        paymentMethod:'طريقة الدفع:', paymentProvider:'دفع آمن بالبطاقة عبر Moyasar',
@@ -1075,7 +1075,7 @@ const STR = {
        cartEmptyTitle:'购物车当前为空。', cartEmptyText:'尽享美味佳肴，现在就下单吧！',
        browseMenu:'浏览菜单', subtotal:'小计：', deliveryFees:'配送费：', finalTotal:'总计：',
        completeOrder:'立即完成订单', addToCart:'加入购物车', calLabel:'卡路里',
-       checkoutTitle:'结账', mapLayerEn:'Map (English)', removeMeal:'删除此餐点', mapLayerMap:'地图', mapLayerSat:'卫星', bistroLabel:'我们的餐厅', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
+       checkoutTitle:'结账', mapLayerEn:'Map (English)', mapLayerGoogle:'Google 地图', removeMeal:'删除此餐点', mapLayerMap:'地图', mapLayerSat:'卫星', bistroLabel:'我们的餐厅', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
        fullName:'姓名：', fullNamePh:'请输入您的姓名…', mobileNumber:'手机号码（WhatsApp/通话）：',
        deliveryAddress:'送货地址：', deliveryAddressPh:'小区、街道、楼栋/别墅号、公寓号…',
        paymentMethod:'付款方式：', paymentProvider:'通过 Moyasar 安全银行卡付款',
@@ -1736,6 +1736,7 @@ let DELIVERY_ZONE = { enforced:false, center:null, geometry:null };   // overwri
 let MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 let MAP_ATTRIBUTION = '&copy; OpenStreetMap contributors';
 let GEOAPIFY_KEY = '';          // overwritten by loadConfig(); empty = the English map uses OpenFreeMap
+let GOOGLE_MAP_API_KEY = '';
 const PENDING_PAYMENT_KEY = 'redhouse_pending_payment';
 
 async function loadConfig(){
@@ -1761,6 +1762,7 @@ async function loadConfig(){
     MAP_TILE_URL = cfg.mapTileUrl || MAP_TILE_URL;
     if(cfg.mapAttribution !== undefined) MAP_ATTRIBUTION = cfg.mapAttribution;
     GEOAPIFY_KEY = typeof cfg.geoapifyKey === 'string' ? cfg.geoapifyKey.trim() : '';
+    GOOGLE_MAP_API_KEY = typeof cfg.googleMapApiKey === 'string' ? cfg.googleMapApiKey.trim() : '';
     CONFIG_LOADED = true;
   }catch(err){
     console.error('Failed to load server config:', err);
@@ -2511,17 +2513,84 @@ function loadLeaflet(){
   return locLeafletPromise;
 }
 
-/* Base layers: street map (the configured tiles, OpenStreetMap by default) + free Esri satellite imagery, and the bistro marker. */
+/* Base layers: Google Maps when configured, with the existing street tiles and Esri imagery as backups. */
 const SAT_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const SAT_ATTRIBUTION = 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
-const mapLayerControls = [];   // { map, street, sat, control } so the labels can follow the language
+const mapLayerControls = [];   // { map, street, sat, google, control } so the labels can follow the language
 function addBaseLayers(map){
   const opts = { maxZoom:19, referrerPolicy:'strict-origin-when-cross-origin' };
   const street = L.tileLayer(MAP_TILE_URL, { ...opts, attribution:MAP_ATTRIBUTION }).addTo(map);
   const sat = L.tileLayer(SAT_TILE_URL, { ...opts, attribution:SAT_ATTRIBUTION });
-  const entry = { map, street, sat, control:null };
+  const entry = { map, street, sat, google:null, control:null };
   mapLayerControls.push(entry);
+  if(GOOGLE_MAP_API_KEY){
+    entry.google = L.layerGroup();
+    entry.google.on('add', ()=>loadGoogleLayer(entry));
+    entry.google.on('remove', ()=>{ entry.google.clearLayers(); entry.googleLayer = null; });
+    map.removeLayer(street);
+    entry.google.addTo(map);
+  }
   labelMapLayers(entry);
+}
+let googleMutantPromise = null, googleMapsPromise = null, googleMapsAuthFailed = false;
+function loadGoogleMutant(){
+  if(window.L && L.gridLayer && L.gridLayer.googleMutant) return Promise.resolve();
+  if(!googleMutantPromise){
+    googleMutantPromise = new Promise((resolve, reject)=>{
+      const script = document.createElement('script');
+      script.src = `${API_BASE}/vendor/google-mutant/Leaflet.GoogleMutant.js`;
+      script.onload = resolve;
+      script.onerror = ()=>{ script.remove(); reject(new Error('Could not load the Google Maps Leaflet adapter')); };
+      document.head.appendChild(script);
+    }).then(()=>{
+      if(!window.L || !L.gridLayer || !L.gridLayer.googleMutant) throw new Error('Google Maps Leaflet adapter did not initialize');
+    }).catch(err=>{ googleMutantPromise = null; throw err; });
+  }
+  return googleMutantPromise;
+}
+function loadGoogleMapsApi(){
+  if(!GOOGLE_MAP_API_KEY) return Promise.reject(new Error('GOOGLE_MAP_API is not configured'));
+  if(window.google && window.google.maps && !googleMapsAuthFailed) return Promise.resolve();
+  if(!googleMapsPromise){
+    googleMapsPromise = new Promise((resolve, reject)=>{
+      const callbackName = '__redHouseGoogleMapsReady';
+      const timeout = setTimeout(()=>reject(new Error('Google Maps API load timed out')), 20000);
+      window[callbackName] = ()=>{ clearTimeout(timeout); resolve(); };
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAP_API_KEY)}&language=${encodeURIComponent(lang)}&region=SA&loading=async&callback=${callbackName}`;
+      script.onerror = ()=>{ clearTimeout(timeout); script.remove(); reject(new Error('Could not load Google Maps API')); };
+      document.head.appendChild(script);
+    }).then(()=>{
+      if(googleMapsAuthFailed || !window.google || !window.google.maps) throw new Error('Google Maps API authorization failed');
+    }).catch(err=>{ googleMapsPromise = null; throw err; });
+  }
+  return googleMapsPromise;
+}
+function fallbackFromGoogle(entry){
+  if(entry.google && entry.map.hasLayer(entry.google)){
+    entry.map.removeLayer(entry.google);
+    entry.map.addLayer(entry.street);
+  }
+}
+window.gm_authFailure = ()=>{
+  googleMapsAuthFailed = true;
+  console.error('Google Maps authorization failed; switching to the backup map.');
+  mapLayerControls.forEach(fallbackFromGoogle);
+};
+async function loadGoogleLayer(entry){
+  try{
+    await loadGoogleMutant();
+    await loadGoogleMapsApi();
+    if(!entry.map.hasLayer(entry.google)) return;
+    if(googleMapsAuthFailed) throw new Error('Google Maps authorization failed');
+    const layer = L.gridLayer.googleMutant({ type:'roadmap' });
+    entry.google.addLayer(layer);
+    entry.googleLayer = layer;
+  }catch(err){
+    console.error('Could not load Google Maps; using the backup map:', err);
+    fallbackFromGoogle(entry);
+  }
 }
 /* Optional "Map (English)" layer (English menu only): OpenFreeMap vector tiles with English street names where OpenStreetMap has them.
    Loaded only when a customer picks it; if anything fails, the normal map comes straight back. */
@@ -2601,6 +2670,7 @@ function labelMapLayers(entry){
     entry.en.on('remove', ()=>{ entry.en.clearLayers(); entry.enGl = null; });
   }
   const bases = { [STR[lang].mapLayerMap]:entry.street };
+  if(entry.google) bases[STR[lang].mapLayerGoogle] = entry.google;
   if(english) bases[STR[lang].mapLayerEn] = entry.en;
   bases[STR[lang].mapLayerSat] = entry.sat;
   entry.control = L.control.layers(bases, null, { collapsed:false, position:'topright' }).addTo(entry.map);

@@ -96,6 +96,7 @@ app.get('/menu-page.html', sendMenuPage);
 app.use('/demo', express.static(path.join(__dirname, 'demo')));
 // Leaflet (map library) is served from this server, not a CDN, so the maps do not depend on a third party script.
 app.use('/vendor/leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist'), { maxAge: '7d' }));
+app.use('/vendor/google-mutant', express.static(path.join(__dirname, 'node_modules', 'leaflet.gridlayer.googlemutant', 'dist'), { maxAge: '7d' }));
 // MapLibre (+ its Leaflet plugin) draws the optional English street-name map (OpenFreeMap). It is only loaded when a customer picks that layer.
 app.use('/vendor/maplibre', express.static(path.join(__dirname, 'node_modules', 'maplibre-gl', 'dist'), { maxAge: '7d' }));
 app.use('/vendor/maplibre-leaflet', express.static(path.join(__dirname, 'node_modules', '@maplibre', 'maplibre-gl-leaflet'), { maxAge: '7d' }));
@@ -159,6 +160,8 @@ app.get('/api/config', async (req, res) => {
     // Geoapify key for the optional "Map (English)" layer on the English menu. Browser-side by design (Geoapify keys are
     // meant for web pages), so restrict it to your domain in the Geoapify dashboard. Empty = the OpenFreeMap English map.
     geoapifyKey: (process.env.GEOAPIFY_API_KEY || '').trim(),
+    // Google Maps JavaScript API key is public in the browser; restrict it to this site's referrers in Google Cloud.
+    googleMapApiKey: (process.env.GOOGLE_MAP_API || '').trim(),
     // where home delivery is allowed; the checkout draws it and gives instant feedback, POST /api/orders enforces it
     // texts + outline colour of the two big cart boxes (Admin -> Cart boxes); built-in texts where nothing is saved
     cartBoxes: await cartBoxes.getCartBoxes().catch(() => cartBoxes.merge(null)),
