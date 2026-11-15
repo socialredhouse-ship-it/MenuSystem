@@ -96,6 +96,9 @@ app.get('/menu-page.html', sendMenuPage);
 app.use('/demo', express.static(path.join(__dirname, 'demo')));
 // Leaflet (map library) is served from this server, not a CDN, so the maps do not depend on a third party script.
 app.use('/vendor/leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist'), { maxAge: '7d' }));
+// MapLibre (+ its Leaflet plugin) draws the optional English street-name map (OpenFreeMap). It is only loaded when a customer picks that layer.
+app.use('/vendor/maplibre', express.static(path.join(__dirname, 'node_modules', 'maplibre-gl', 'dist'), { maxAge: '7d' }));
+app.use('/vendor/maplibre-leaflet', express.static(path.join(__dirname, 'node_modules', '@maplibre', 'maplibre-gl-leaflet'), { maxAge: '7d' }));
 app.get('/homepage.html', (req, res) => {
   res.redirect(302, `/menu${req.originalUrl.slice('/homepage.html'.length)}`);
 });

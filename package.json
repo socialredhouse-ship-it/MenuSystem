@@ -9,6 +9,7 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@supabase/supabase-js": "^2.45.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -16,6 +17,7 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "leaflet": "^1.9.4",
+    "maplibre-gl": "^4.7.1",
     "multer": "^2.4.0"
   }
 }
