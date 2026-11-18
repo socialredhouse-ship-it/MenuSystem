@@ -9,6 +9,8 @@ const { getDeliverySettings, CURRENCY, CURRENCY_DIGITS } = require('../db/delive
 const { getMoyasarConfig } = require('../db/moyasar-config');
 const deliveryZone = require('../db/delivery-zone');
 const contactRoutes = require('./contact');
+const openingHours = require('../db/opening-hours');
+const promoCodes = require('../db/promo-codes');
 
 const router = express.Router();
 
@@ -63,6 +65,12 @@ router.post('/orders', orderLimiter, async (req, res) => {
   }
   if (req.body.payment_method !== 'moyasar') {
     return res.status(400).json({ error: 'Orders must be placed through the Moyasar payment form.' });
+  }
+  // Admin -> Opening hours: while the restaurant is closed (or paused) no order can reach payment, however the request was made.
+  const openStatus = await openingHours.getStatus();
+  if (!openStatus.open) {
+    debug('ORDER', `#${requestId} refused: closed`, { mode: openStatus.mode });
+    return res.status(403).json({ error: 'We are closed right now and are not taking orders.', code: 'CLOSED' });
   }
 
   const {
@@ -155,8 +163,19 @@ router.post('/orders', orderLimiter, async (req, res) => {
     return res.status(500).json({ error: 'Could not load delivery settings. Please try again.' });
   }
   const deliveryFee = delivery_type === 'delivery' && deliverySettings.enabled ? deliverySettings.amount : 0;
-  const total = toMoney(subtotal + deliveryFee);
-  debug('ORDER', `#${requestId} total calculated`, { subtotal, deliveryFee, total, currency: CURRENCY });
+  // Promo code (optional): checked again here, the browser's idea of the discount is never trusted.
+  let discount = 0;
+  let promoCode = null;
+  if (req.body.promo_code != null && String(req.body.promo_code).trim() !== '') {
+    const promo = await promoCodes.evaluate(req.body.promo_code, subtotal);
+    if (!promo.ok) {
+      return res.status(400).json({ error: 'This promo code can not be used for this order.', code: 'PROMO_INVALID', reason: promo.reason });
+    }
+    discount = promo.discount;
+    promoCode = promo.code;
+  }
+  const total = toMoney(subtotal - discount + deliveryFee);
+  debug('ORDER', `#${requestId} total calculated`, { subtotal, discount, deliveryFee, total, currency: CURRENCY });
   if (toMinorUnits(total) < 100) {
     return res.status(400).json({ error: 'The order total is below Moyasar’s minimum payment amount.' });
   }
@@ -176,15 +195,26 @@ router.post('/orders', orderLimiter, async (req, res) => {
     moyasar_reference: paymentReference,
     subtotal,
     total,
+    whatsapp_optin: req.body.whatsapp_optin === true,   // the customer's own tick, never assumed
+    promo_code: promoCode,
+    discount,
   };
   let { data: order, error: orderErr } = await supabase.from('orders').insert(orderRow).select().single();
+  // db/07_customers_promos.sql not run yet: save the order without those three columns (the charged total already
+  // includes the discount) instead of refusing the customer's order.
+  const missingNewColumns = (e) => isMissingColumn(e) && /whatsapp_optin|promo_code|discount/.test(`${e.message || ''} ${e.details || ''}`);
+  if (orderErr && missingNewColumns(orderErr)) {
+    const { whatsapp_optin, promo_code, discount: discountColumn, ...withoutNew } = orderRow;
+    console.error('orders.whatsapp_optin / promo_code / discount are missing: run db/07_customers_promos.sql in the Supabase SQL Editor.');
+    ({ data: order, error: orderErr } = await supabase.from('orders').insert(withoutNew).select().single());
+  }
   // Only fall back when the *pin* columns are the missing ones. If a payment column (moyasar_reference) is the
   // missing one, retrying without the pin columns would just fail again and hide the real cause.
   const missingPinColumns = (e) => isMissingColumn(e) && /delivery_(lat|lng)/.test(`${e.message || ''} ${e.details || ''}`);
   if (orderErr && missingPinColumns(orderErr)) {
     // db/01_tables.sql has not been re-run yet, so the pin columns do not exist: save the order without them
     // (the pin was still checked above) and keep the pin in memory for the tracking page.
-    const { delivery_lat, delivery_lng, ...legacyRow } = orderRow;
+    const { delivery_lat, delivery_lng, whatsapp_optin: _w, promo_code: _p, discount: _d, ...legacyRow } = orderRow;
     ({ data: order, error: orderErr } = await supabase.from('orders').insert(legacyRow).select().single());
     if (!orderErr && deliveryPoint) remember(geoMemory, order.order_number, deliveryPoint);
     console.error('orders.delivery_lat / delivery_lng are missing: run db/01_tables.sql in the Supabase SQL Editor to store customer pins.');
@@ -216,6 +246,7 @@ router.post('/orders', orderLimiter, async (req, res) => {
     order_number: order.order_number, // e.g. RH-260928-0042 — show this to the customer
     order_token: order.order_token, // keep this client-side to look the order up later
     subtotal,
+    discount,
     deliveryFee,
     total,
     payment_amount: toMinorUnits(total),

@@ -498,6 +498,20 @@
   #coStep2 #locMap, #coStep2 #pickupMap{height:clamp(300px, 48svh, 560px);}
   #coStep2 .cart-summary{position:static;}   /* the map, GPS and search stay reachable; totals + pay follow below */
   #coNextNote{margin:8px 0 0;}
+  .promo-box{margin:6px 0 4px;}
+  .promo-row{display:flex; gap:8px;}
+  .promo-row .field-input{flex:1; min-width:0; text-transform:uppercase;}
+  .promo-btn{flex-shrink:0; border:1px solid var(--gold); background:transparent; color:var(--gold); border-radius:12px; padding:0 18px; min-height:44px; font:inherit; font-weight:700; cursor:pointer;}
+  .promo-btn:disabled{opacity:.5; cursor:default;}
+  .promo-applied{display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px dashed var(--gold); border-radius:12px; padding:10px 12px; color:var(--gold); font-weight:700;}
+  .promo-applied button{background:none; border:none; color:var(--muted); text-decoration:underline; font:inherit; cursor:pointer;}
+  .promo-msg{margin:6px 0 0; font-size:calc(12px + var(--lang-add,0px)); color:#e0716d;}
+  .summary-line.discount{color:#6fcf97;}
+  .optin{display:flex; align-items:flex-start; gap:10px; margin:14px 0 4px; cursor:pointer; font-size:calc(14px + var(--lang-add,0px)); line-height:1.4;}
+  .optin input{width:20px; height:20px; margin:1px 0 0; accent-color:var(--gold); flex-shrink:0;}
+  .closed-bar{margin:12px 16px 0; padding:12px 14px; border-radius:14px; background:#3a1614; border:1px solid #b3261e; color:#ffd9d6; font-weight:600; line-height:1.4; text-align:center;}
+  .closed-bar[hidden]{display:none;}
+  #cartCheckoutBtn:disabled{opacity:.5; cursor:not-allowed;}
   .co-item .co-del{background:none; border:none; color:var(--muted); cursor:pointer; padding:6px; margin-inline-end:4px; flex-shrink:0; align-self:center; border-radius:8px;}
   .co-item .co-del:hover, .co-item .co-del:focus-visible{color:#e0716d;}
   .co-item .co-del svg{width:19px; height:19px; display:block;}
@@ -680,6 +694,7 @@
     </aside>
 -->
 
+    <div class="closed-bar" id="closedBar" role="status" hidden></div>
     <main id="list"></main>
 
     <div class="floating">
@@ -770,6 +785,7 @@
       <span class="overlay-title" id="cartTitle"></span>
       <span class="count-pill" id="cartCountPill">0</span>
     </div>
+    <div class="closed-bar" id="closedBarCart" role="status" hidden></div>
     <div class="order-type" id="orderTypeRow">
       <button type="button" class="choice-box" data-type="delivery" id="deliveryBtn" aria-pressed="true">
         <span class="cb-title"></span><span class="cb-line"></span><span class="cb-line"></span><span class="cb-line"></span>
@@ -789,6 +805,7 @@
     <div class="cart-list" id="cartList" style="display:none;"></div>
     <div class="cart-summary" id="cartSummary" style="display:none;">
       <div class="summary-line"><span id="cartSubtotalLabel"></span><span id="cartSubtotalVal"></span></div>
+      <div class="summary-line discount" id="cartDiscountLine" style="display:none;"><span id="cartDiscountLabel"></span><span id="cartDiscountVal"></span></div>
       <div class="summary-line" id="cartDeliveryLine"><span id="cartDeliveryLabel"></span><span id="cartDeliveryVal"></span></div>
       <div class="summary-line final"><span id="cartTotalLabel"></span><span id="cartTotalVal"></span></div>
       <button class="primary-btn" id="cartCheckoutBtn"></button>
@@ -876,7 +893,17 @@
       <div id="checkoutDetails" data-step="1">
       <div id="coStep1">
         <div class="co-items" id="coItems"></div>
+        <div class="summary-line discount" id="coDiscountLine" style="display:none;"><span id="coDiscountLabel"></span><span id="coDiscountVal"></span></div>
         <div class="summary-line final"><span id="coTotalLabel"></span><span id="coTotalVal"></span></div>
+        <div class="promo-box" id="promoBox" hidden>
+          <p class="field-label" id="promoLabel"></p>
+          <div class="promo-row" id="promoRow">
+            <input class="field-input" id="promoInput" type="text" autocomplete="off" autocapitalize="characters" maxlength="20" spellcheck="false">
+            <button type="button" class="promo-btn" id="promoApplyBtn"></button>
+          </div>
+          <div class="promo-applied" id="promoApplied" hidden><span id="promoAppliedText"></span><button type="button" id="promoRemoveBtn"></button></div>
+          <p class="promo-msg" id="promoMsg" role="status" aria-live="polite"></p>
+        </div>
         <p class="field-label" id="nameLabel"></p>
         <input class="field-input" id="checkoutName" type="text">
         <p class="field-label" id="phoneLabel"></p>
@@ -886,6 +913,7 @@
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           <span id="paymentMethodText"></span>
         </div>
+        <label class="optin"><input type="checkbox" id="coOptin"><span id="coOptinText"></span></label>
         <button class="primary-btn" id="coNextBtn" type="button"></button>
         <p class="status-note" id="coNextNote"></p>
       </div>
@@ -915,6 +943,7 @@
 
       <div class="cart-summary" style="border:none; padding:18px 0 0;">
         <div class="summary-line"><span id="checkoutSubLabel"></span><span id="checkoutSubVal"></span></div>
+        <div class="summary-line discount" id="checkoutDiscountLine" style="display:none;"><span id="checkoutDiscountLabel"></span><span id="checkoutDiscountVal"></span></div>
         <div class="summary-line" id="checkoutDeliveryLine"><span id="checkoutDeliveryLabel"></span><span id="checkoutDeliveryVal"></span></div>
         <div class="summary-line final"><span id="checkoutTotalLabel"></span><span id="checkoutTotalVal"></span></div>
         <button class="primary-btn wa-btn" id="checkoutPayBtn"></button>
@@ -958,7 +987,7 @@ const STR = {
        cartEmptyTitle:'The basket is currently empty.', cartEmptyText:'Enjoy the most delicious meals and order now!',
        browseMenu:'Browse the menu', subtotal:'Subtotal:', deliveryFees:'Delivery fees:', finalTotal:'Final total:',
        completeOrder:'Complete your order now', addToCart:'Add to cart', calLabel:'Calories',
-       checkoutTitle:'Checkout', mapLayerEn:'Map (English)', mapLayerGoogle:'Google Maps', removeMeal:'Remove this meal', mapLayerMap:'Map', mapLayerSat:'Satellite', bistroLabel:'Our bistro', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
+       checkoutTitle:'Checkout', promoLabel:'Promo code', promoPlaceholder:'Enter code', promoApply:'Apply', promoRemove:'Remove', promoApplied:'Code {c} applied', promoDiscount:'Discount', promoInvalid:'This code is not valid.', promoInactive:'This code is not active.', promoExpired:'This code has expired.', promoMin:'This code needs an order of at least {m}.', promoUsedUp:'This code has been fully used.', promoRemoved:'The promo code can no longer be used for this order.', promoFailed:'Could not check the code. Please try again.', optinText:'Send me menu updates & offers on WhatsApp', closedNow:'We are closed right now.', opensToday:'We open today at {t}.', opensTomorrow:'We open tomorrow at {t}.', opensOn:'We open on {d} at {t}.', orderingPaused:'Ordering is paused for now. Please check back soon.', mapLayerEn:'Map (English)', mapLayerGoogle:'Google Maps', removeMeal:'Remove this meal', mapLayerMap:'Map', mapLayerSat:'Satellite', bistroLabel:'Our bistro', coStep1Title:'Your order', coStep2Title:'Your location', coStep2PickupTitle:'Our branch location', coNext:'Next', coTotal:'Total:', pickupMapLabel:'Our branch on the map', pickupMapFailed:'The map could not be loaded.',
        fullName:'Full name:', fullNamePh:'Enter your name...', mobileNumber:'Mobile number (WhatsApp/call):',
        deliveryAddress:'Delivery address:', deliveryAddressPh:'Neighborhood, street, building/villa, apartment...',
        paymentMethod:'Payment method:', paymentProvider:'Secure card payment by Moyasar',
@@ -997,7 +1026,7 @@ const STR = {
        cartEmptyTitle:'السلة فارغة حالياً.', cartEmptyText:'استمتع بألذ الأطباق واطلب وجبتك الآن!',
        browseMenu:'تصفح القائمة', subtotal:'المجموع الفرعي:', deliveryFees:'رسوم التوصيل:', finalTotal:'الإجمالي النهائي:',
        completeOrder:'أكمل طلبك الآن', addToCart:'أضف إلى السلة', calLabel:'سعرة حرارية',
-       checkoutTitle:'إتمام الطلب', mapLayerEn:'Map (English)', mapLayerGoogle:'خرائط Google', removeMeal:'حذف هذه الوجبة', mapLayerMap:'خريطة', mapLayerSat:'قمر صناعي', bistroLabel:'مطعمنا', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
+       checkoutTitle:'إتمام الطلب', promoLabel:'رمز الخصم', promoPlaceholder:'أدخل الرمز', promoApply:'تطبيق', promoRemove:'إزالة', promoApplied:'تم تطبيق الرمز {c}', promoDiscount:'الخصم', promoInvalid:'هذا الرمز غير صالح.', promoInactive:'هذا الرمز غير مفعّل.', promoExpired:'انتهت صلاحية هذا الرمز.', promoMin:'يتطلب هذا الرمز طلباً لا يقل عن {m}.', promoUsedUp:'تم استخدام هذا الرمز بالكامل.', promoRemoved:'لم يعد بالإمكان استخدام رمز الخصم لهذا الطلب.', promoFailed:'تعذر التحقق من الرمز. حاول مرة أخرى.', optinText:'أرسلوا لي تحديثات القائمة والعروض عبر واتساب', closedNow:'نحن مغلقون الآن.', opensToday:'نفتح اليوم الساعة {t}.', opensTomorrow:'نفتح غداً الساعة {t}.', opensOn:'نفتح يوم {d} الساعة {t}.', orderingPaused:'استقبال الطلبات متوقف مؤقتاً. يرجى المحاولة لاحقاً.', mapLayerEn:'Map (English)', mapLayerGoogle:'خرائط Google', removeMeal:'حذف هذه الوجبة', mapLayerMap:'خريطة', mapLayerSat:'قمر صناعي', bistroLabel:'مطعمنا', coStep1Title:'طلبك', coStep2Title:'موقعك', coStep2PickupTitle:'موقع فرعنا', coNext:'التالي', coTotal:'الإجمالي:', pickupMapLabel:'موقع فرعنا على الخريطة', pickupMapFailed:'تعذر تحميل الخريطة.',
        fullName:'الاسم الكامل:', fullNamePh:'أدخل اسمك...', mobileNumber:'رقم الجوال (واتساب/اتصال):',
        deliveryAddress:'عنوان التوصيل:', deliveryAddressPh:'الحي، الشارع، رقم المبنى/الفيلا، الشقة...',
        paymentMethod:'طريقة الدفع:', paymentProvider:'دفع آمن بالبطاقة عبر Moyasar',
@@ -1036,7 +1065,7 @@ const STR = {
        cartEmptyTitle:'ٹوکری اس وقت خالی ہے۔', cartEmptyText:'لذیذ کھانوں سے لطف اٹھائیں اور ابھی آرڈر کریں!',
        browseMenu:'مینو دیکھیں', subtotal:'ذیلی مجموعہ:', deliveryFees:'ڈیلیوری فیس:', finalTotal:'حتمی رقم:',
        completeOrder:'ابھی آرڈر مکمل کریں', addToCart:'کارٹ میں شامل کریں', calLabel:'کیلوریز',
-       checkoutTitle:'چیک آؤٹ', mapLayerEn:'Map (English)', removeMeal:'یہ کھانا ہٹائیں', mapLayerMap:'نقشہ', mapLayerSat:'سیٹلائٹ', bistroLabel:'ہمارا بسٹرو', coStep1Title:'آپ کا آرڈر', coStep2Title:'آپ کا مقام', coStep2PickupTitle:'ہماری برانچ کا مقام', coNext:'اگلا', coTotal:'کل:', pickupMapLabel:'نقشے پر ہماری برانچ', pickupMapFailed:'نقشہ لوڈ نہیں ہو سکا۔',
+       checkoutTitle:'چیک آؤٹ', promoLabel:'پرومو کوڈ', promoPlaceholder:'کوڈ درج کریں', promoApply:'لاگو کریں', promoRemove:'ہٹائیں', promoApplied:'کوڈ {c} لاگو ہو گیا', promoDiscount:'رعایت', promoInvalid:'یہ کوڈ درست نہیں ہے۔', promoInactive:'یہ کوڈ فعال نہیں ہے۔', promoExpired:'اس کوڈ کی میعاد ختم ہو چکی ہے۔', promoMin:'اس کوڈ کے لیے کم از کم {m} کا آرڈر ضروری ہے۔', promoUsedUp:'یہ کوڈ مکمل استعمال ہو چکا ہے۔', promoRemoved:'یہ پرومو کوڈ اب اس آرڈر پر استعمال نہیں ہو سکتا۔', promoFailed:'کوڈ چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔', optinText:'مجھے مینو اپڈیٹس اور آفرز واٹس ایپ پر بھیجیں', closedNow:'ہم اس وقت بند ہیں۔', opensToday:'ہم آج {t} بجے کھلیں گے۔', opensTomorrow:'ہم کل {t} بجے کھلیں گے۔', opensOn:'ہم {d} کو {t} بجے کھلیں گے۔', orderingPaused:'آرڈرز فی الحال بند ہیں۔ براہ کرم تھوڑی دیر بعد دیکھیں۔', mapLayerEn:'Map (English)', removeMeal:'یہ کھانا ہٹائیں', mapLayerMap:'نقشہ', mapLayerSat:'سیٹلائٹ', bistroLabel:'ہمارا بسٹرو', coStep1Title:'آپ کا آرڈر', coStep2Title:'آپ کا مقام', coStep2PickupTitle:'ہماری برانچ کا مقام', coNext:'اگلا', coTotal:'کل:', pickupMapLabel:'نقشے پر ہماری برانچ', pickupMapFailed:'نقشہ لوڈ نہیں ہو سکا۔',
        fullName:'پورا نام:', fullNamePh:'اپنا نام درج کریں...', mobileNumber:'موبائل نمبر (واٹس ایپ/کال):',
        deliveryAddress:'ڈیلیوری پتہ:', deliveryAddressPh:'محلہ، گلی، عمارت/ولا نمبر، اپارٹمنٹ...',
        paymentMethod:'ادائیگی کا طریقہ:', paymentProvider:'Moyasar کے ذریعے محفوظ کارڈ ادائیگی',
@@ -1075,7 +1104,7 @@ const STR = {
        cartEmptyTitle:'购物车当前为空。', cartEmptyText:'尽享美味佳肴，现在就下单吧！',
        browseMenu:'浏览菜单', subtotal:'小计：', deliveryFees:'配送费：', finalTotal:'总计：',
        completeOrder:'立即完成订单', addToCart:'加入购物车', calLabel:'卡路里',
-       checkoutTitle:'结账', mapLayerEn:'Map (English)', mapLayerGoogle:'Google 地图', removeMeal:'删除此餐点', mapLayerMap:'地图', mapLayerSat:'卫星', bistroLabel:'我们的餐厅', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
+       checkoutTitle:'结账', promoLabel:'优惠码', promoPlaceholder:'输入优惠码', promoApply:'使用', promoRemove:'移除', promoApplied:'已使用优惠码 {c}', promoDiscount:'优惠', promoInvalid:'此优惠码无效。', promoInactive:'此优惠码未启用。', promoExpired:'此优惠码已过期。', promoMin:'此优惠码需订单满 {m}。', promoUsedUp:'此优惠码已被用完。', promoRemoved:'此优惠码已不能用于本订单。', promoFailed:'无法检查优惠码，请重试。', optinText:'通过 WhatsApp 向我发送菜单更新和优惠', closedNow:'我们现在已打烊。', opensToday:'今天 {t} 营业。', opensTomorrow:'明天 {t} 营业。', opensOn:'{d} {t} 营业。', orderingPaused:'暂时停止接单，请稍后再来。', mapLayerEn:'Map (English)', mapLayerGoogle:'Google 地图', removeMeal:'删除此餐点', mapLayerMap:'地图', mapLayerSat:'卫星', bistroLabel:'我们的餐厅', coStep1Title:'您的订单', coStep2Title:'您的位置', coStep2PickupTitle:'我们分店的位置', coNext:'下一步', coTotal:'合计：', pickupMapLabel:'地图上的分店位置', pickupMapFailed:'地图无法加载。',
        fullName:'姓名：', fullNamePh:'请输入您的姓名…', mobileNumber:'手机号码（WhatsApp/通话）：',
        deliveryAddress:'送货地址：', deliveryAddressPh:'小区、街道、楼栋/别墅号、公寓号…',
        paymentMethod:'付款方式：', paymentProvider:'通过 Moyasar 安全银行卡付款',
@@ -1726,6 +1755,9 @@ let CURRENCY = 'SAR';
 const API_BASE = window.location.origin;
 let DELIVERY_FEE = 20;          // overwritten by loadConfig() below
 let DELIVERY_FEE_ENABLED = true;
+let promo = null;                 // { code, discount } while a valid promo code is applied (the server checks it again when ordering)
+let PROMO_ENABLED = false;        // true when Admin -> Promo codes has a usable code; only then the promo box shows
+let OPEN_STATUS = { open:true, mode:'open', nextOpen:null, message:{} };   // Admin -> Opening hours
 let CONFIG_LOADED = false;
 let WHATSAPP_NUMBER = '';       // overwritten by loadConfig() below
 let BRANCH_NAME = 'Red House Trading';
@@ -1763,6 +1795,8 @@ async function loadConfig(){
     if(cfg.mapAttribution !== undefined) MAP_ATTRIBUTION = cfg.mapAttribution;
     GEOAPIFY_KEY = typeof cfg.geoapifyKey === 'string' ? cfg.geoapifyKey.trim() : '';
     GOOGLE_MAP_API_KEY = typeof cfg.googleMapApiKey === 'string' ? cfg.googleMapApiKey.trim() : '';
+    PROMO_ENABLED = cfg.promoEnabled === true;
+    if(cfg.openStatus && typeof cfg.openStatus === 'object') OPEN_STATUS = { ...OPEN_STATUS, ...cfg.openStatus };
     CONFIG_LOADED = true;
   }catch(err){
     console.error('Failed to load server config:', err);
@@ -1964,6 +1998,7 @@ function cartSet(id, qty){
   id = Number(id);
   if(qty <= 0){ delete cart[id]; } else { cart[id] = qty; }
   updateCartBadge();
+  schedulePromoRevalidate();
 
   if(authToken){
     const request = qty <= 0
@@ -2079,7 +2114,106 @@ function pruneUnavailableCart(){
 }
 function cartSubtotal(){ return cartLines().reduce((sum,l)=>sum+l.lineTotal,0); }
 function cartDeliveryFee(){ return orderType==='delivery' && DELIVERY_FEE_ENABLED ? DELIVERY_FEE : 0; }
-function cartTotal(){ return cartSubtotal() + cartDeliveryFee(); }
+function cartDiscount(){ return promo ? Math.min(promo.discount, cartSubtotal()) : 0; }
+function cartTotal(){ return cartSubtotal() - cartDiscount() + cartDeliveryFee(); }
+
+/* ---------- opening hours: "closed now" notice ---------- */
+const DATE_LOCALES = { en:'en', ar:'ar', ur:'ur', zh:'zh-CN' };
+function openStatusText(){
+  const custom = OPEN_STATUS.message && OPEN_STATUS.message[lang];
+  if(custom) return custom;
+  const n = OPEN_STATUS.nextOpen;
+  if(n){
+    const template = n.dayOffset === 0 ? STR[lang].opensToday : n.dayOffset === 1 ? STR[lang].opensTomorrow : STR[lang].opensOn;
+    const dayName = new Date(Date.UTC(2023, 0, 1 + Number(n.dow))).toLocaleDateString(DATE_LOCALES[lang] || 'en', { weekday:'long', timeZone:'UTC' });
+    return `${STR[lang].closedNow} ${template.replace('{t}', n.time).replace('{d}', dayName)}`;
+  }
+  return OPEN_STATUS.mode === 'closed' ? STR[lang].orderingPaused : STR[lang].closedNow;
+}
+function applyOpenStatus(){
+  const closed = OPEN_STATUS.open === false;
+  ['closedBar', 'closedBarCart'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.hidden = !closed;
+    if(closed) el.textContent = openStatusText();
+  });
+  const btn = document.getElementById('cartCheckoutBtn');
+  if(btn) btn.disabled = closed;
+}
+async function refreshOpenStatus(){
+  try{
+    const res = await fetch(`${API_BASE}/api/open-status`, { cache:'no-store' });
+    if(res.ok) OPEN_STATUS = { ...OPEN_STATUS, ...(await res.json()) };
+  }catch(_){ /* keep the last known state; the server refuses orders when closed anyway */ }
+  applyOpenStatus();
+}
+setInterval(refreshOpenStatus, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshOpenStatus(); });
+
+/* ---------- promo code ---------- */
+function promoMessage(result){
+  const m = { invalid:'promoInvalid', inactive:'promoInactive', expired:'promoExpired', used_up:'promoUsedUp' }[result.reason];
+  if(result.reason === 'min_order') return STR[lang].promoMin.replace('{m}', money(result.minOrder));
+  return STR[lang][m || 'promoInvalid'];
+}
+async function checkPromoCode(code){
+  const res = await fetch(`${API_BASE}/api/promo/validate`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ code, items: cartLines().map(l=>({ menu_item_id:l.item.id, quantity:l.qty })) })
+  });
+  if(res.status === 429) throw new Error('rate');
+  if(!res.ok) throw new Error('failed');
+  return res.json();
+}
+function renderPromoBox(){
+  const box = document.getElementById('promoBox');
+  if(!box) return;
+  box.hidden = !(PROMO_ENABLED || promo);
+  document.getElementById('promoRow').hidden = !!promo;
+  document.getElementById('promoApplied').hidden = !promo;
+  if(promo) document.getElementById('promoAppliedText').textContent = STR[lang].promoApplied.replace('{c}', promo.code);
+}
+function setPromoMessage(text){ const el = document.getElementById('promoMsg'); if(el) el.textContent = text || ''; }
+// everything that shows a price, after the promo / basket changed
+function refreshMoneyViews(){
+  renderCart();
+  refreshCheckoutOrderType();
+  refreshCheckoutStaticText();
+}
+async function applyPromo(){
+  const input = document.getElementById('promoInput');
+  const code = input.value.trim().toUpperCase();
+  if(!code){ setPromoMessage(STR[lang].promoInvalid); return; }
+  const btn = document.getElementById('promoApplyBtn');
+  btn.disabled = true; setPromoMessage('');
+  try{
+    const result = await checkPromoCode(code);
+    if(result.valid){ promo = { code:result.code, discount:Number(result.discount) }; input.value = ''; refreshMoneyViews(); }
+    else setPromoMessage(promoMessage(result));
+  }catch(_){ setPromoMessage(STR[lang].promoFailed); }
+  finally{ btn.disabled = false; }
+}
+function removePromo(){ promo = null; setPromoMessage(''); refreshMoneyViews(); }
+// the basket changed: ask the server for the new discount (or drop the code if it no longer applies)
+let promoTimer = null;
+function schedulePromoRevalidate(){
+  if(!promo) return;
+  clearTimeout(promoTimer);
+  promoTimer = setTimeout(async ()=>{
+    if(!promo) return;
+    if(!cartLines().length){ promo = null; refreshMoneyViews(); return; }
+    try{
+      const result = await checkPromoCode(promo.code);
+      if(result.valid) promo = { code:result.code, discount:Number(result.discount) };
+      else { promo = null; setPromoMessage(STR[lang].promoRemoved); }
+    }catch(_){ /* keep it; the server decides at payment */ }
+    refreshMoneyViews();
+  }, 400);
+}
+document.getElementById('promoApplyBtn').addEventListener('click', applyPromo);
+document.getElementById('promoRemoveBtn').addEventListener('click', removePromo);
+document.getElementById('promoInput').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); applyPromo(); } });
 function currencyDigits(){
   try{ return new Intl.NumberFormat('en', { style:'currency', currency:CURRENCY }).resolvedOptions().maximumFractionDigits; }
   catch{ return 2; }
@@ -2177,6 +2311,8 @@ function refreshCartStaticText(){
   document.getElementById('cartDeliveryLabel').textContent = STR[lang].deliveryFees;
   document.getElementById('cartTotalLabel').textContent = STR[lang].finalTotal;
   document.getElementById('cartCheckoutBtn').textContent = STR[lang].completeOrder;
+  document.getElementById('cartDiscountLabel').textContent = STR[lang].promoDiscount;
+  applyOpenStatus();
 }
 function openCart(){ renderCart(); openOverlay(cartOverlay); }
 document.getElementById('cartClose').addEventListener('click', ()=> closeOverlay(cartOverlay));
@@ -2249,6 +2385,8 @@ function renderCart(){
   });
 
   setMoney(document.getElementById('cartSubtotalVal'), cartSubtotal());
+  document.getElementById('cartDiscountLine').style.display = cartDiscount() > 0 ? 'flex' : 'none';
+  setMoney(document.getElementById('cartDiscountVal'), -cartDiscount());
   document.getElementById('cartDeliveryLine').style.display = orderType==='delivery' && DELIVERY_FEE_ENABLED ? 'flex' : 'none';
   setMoney(document.getElementById('cartDeliveryVal'), cartDeliveryFee());
   setMoney(document.getElementById('cartTotalVal'), cartTotal());
@@ -2855,13 +2993,20 @@ function renderCheckoutItems(){
     btn.addEventListener('click', ()=>{
       cartSet(Number(btn.closest('.co-item').dataset.id), 0);
       if(!cartLines().length){ invalidateMoyasarInit(); closeOverlay(checkoutOverlay); renderCart(); openCart(); return; }   // nothing left to order: back to the (empty) basket
-      renderCart();
-      refreshCheckoutOrderType();
-      renderCheckoutItems();
-      document.getElementById('checkoutPayBtn').innerHTML = `${escapeHtml(STR[lang].payBtn)} · ${moneyHtml(cartTotal())}`;
+      refreshMoneyViews();   // schedulePromoRevalidate() (from cartSet) then fetches the new discount
     });
   });
   document.getElementById('coTotalLabel').textContent = STR[lang].coTotal;
+  document.getElementById('coDiscountLabel').textContent = STR[lang].promoDiscount;
+  document.getElementById('checkoutDiscountLabel').textContent = STR[lang].promoDiscount;
+  document.getElementById('coDiscountLine').style.display = cartDiscount() > 0 ? 'flex' : 'none';
+  setMoney(document.getElementById('coDiscountVal'), -cartDiscount());
+  document.getElementById('promoLabel').textContent = STR[lang].promoLabel;
+  document.getElementById('promoInput').placeholder = STR[lang].promoPlaceholder;
+  document.getElementById('promoApplyBtn').textContent = STR[lang].promoApply;
+  document.getElementById('promoRemoveBtn').textContent = STR[lang].promoRemove;
+  document.getElementById('coOptinText').textContent = STR[lang].optinText;
+  renderPromoBox();
   setMoney(document.getElementById('coTotalVal'), cartTotal());
 }
 function setCheckoutStep(step){
@@ -2921,6 +3066,8 @@ function refreshCheckoutStaticText(){
 function refreshCheckoutOrderType(){
   document.getElementById('addressWrap').style.display = orderType==='delivery' ? 'block' : 'none';
   setMoney(document.getElementById('checkoutSubVal'), cartSubtotal());
+  document.getElementById('checkoutDiscountLine').style.display = cartDiscount() > 0 ? 'flex' : 'none';
+  setMoney(document.getElementById('checkoutDiscountVal'), -cartDiscount());
   document.getElementById('checkoutDeliveryLine').style.display = orderType==='delivery' && DELIVERY_FEE_ENABLED ? 'flex' : 'none';
   setMoney(document.getElementById('checkoutDeliveryVal'), cartDeliveryFee());
   setMoney(document.getElementById('checkoutTotalVal'), cartTotal());
@@ -3189,6 +3336,8 @@ document.getElementById('checkoutPayBtn').addEventListener('click', async ()=>{
     delivery_address: orderType==='delivery' ? address : null,
     delivery_lat: orderType==='delivery' && deliveryPin ? deliveryPin.lat : null,
     delivery_lng: orderType==='delivery' && deliveryPin ? deliveryPin.lng : null,
+    whatsapp_optin: document.getElementById('coOptin').checked,   // the customer's own tick, unticked by default
+    promo_code: promo ? promo.code : null,
     items: cartLines().map(l=>({ menu_item_id: l.item.id, quantity: l.qty }))
   };
 
@@ -3211,7 +3360,8 @@ document.getElementById('checkoutPayBtn').addEventListener('click', async ()=>{
       order_number: order.order_number,
       order_token: order.order_token,
       delivery_lat: payload.delivery_lat,   // kept for the WhatsApp message after a 3-D Secure redirect
-      delivery_lng: payload.delivery_lng
+      delivery_lng: payload.delivery_lng,
+      discount: Number(order.discount) || 0   // so the WhatsApp message after a redirect shows the delivery fee correctly
     }));
     await initializeMoyasarForm(order);
   }catch(err){
@@ -3223,7 +3373,9 @@ document.getElementById('checkoutPayBtn').addEventListener('click', async ()=>{
       document.getElementById('moyasarCheckout').hidden = true;
       document.getElementById('moyasarForm').replaceChildren();
       // The server refused the location: show the same guidance in the customer's language.
-      const zoneKey = { OUT_OF_ZONE:'locOutside', ZONE_UNAVAILABLE:'locZoneDown', LOCATION_REQUIRED:'locNeedPin' }[err.code];
+      const zoneKey = { OUT_OF_ZONE:'locOutside', ZONE_UNAVAILABLE:'locZoneDown', LOCATION_REQUIRED:'locNeedPin', PROMO_INVALID:'promoRemoved', CLOSED:'closedNow' }[err.code];
+      if(err.code === 'PROMO_INVALID'){ promo = null; refreshMoneyViews(); }
+      if(err.code === 'CLOSED') refreshOpenStatus();
       if(err.code === 'OUT_OF_ZONE' && deliveryPin) deliveryPin = { lat:deliveryPin.lat, lng:deliveryPin.lng, rejected:true };
       statusNote.textContent = zoneKey ? STR[lang][zoneKey] : (err.message || STR[lang].orderFailed);
     }
@@ -3241,6 +3393,8 @@ function sendOrderToWhatsApp(order, pin){
   const hasPin = order.delivery_type==='delivery' && pin && pin.delivery_lat!=null && pin.delivery_lng!=null
     && Number.isFinite(Number(pin.delivery_lat)) && Number.isFinite(Number(pin.delivery_lng));
   const pinLine = hasPin ? `\nPin: https://www.google.com/maps?q=${Number(pin.delivery_lat)},${Number(pin.delivery_lng)}` : '';
+  const discount = Number(pin && pin.discount) || 0;
+  const discountLine = discount > 0 ? `\nDiscount: -${money(discount)}` : '';
   const typeLine = order.delivery_type==='delivery'
     ? `Home delivery\nAddress: ${order.delivery_address || ''}${pinLine}`
     : `Pick-up from the branch`;
@@ -3254,8 +3408,8 @@ Phone: ${order.customer_phone}
 Items:
 ${lines}
 
-Subtotal: ${money(order.subtotal)}
-Delivery: ${money(Number(order.total) - Number(order.subtotal))}
+Subtotal: ${money(order.subtotal)}${discountLine}
+Delivery: ${money(Number(order.total) - Number(order.subtotal) + discount)}
 Total: ${money(order.total)}
 Payment: confirmed (Moyasar)
 

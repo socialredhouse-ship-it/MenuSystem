@@ -290,6 +290,33 @@
   .cb-pbox b{font-size:24px; font-weight:800; line-height:1.2; color:var(--cbc,#e3b23c);}
   .cb-pbox span{font-size:22px; line-height:1.3;}
   .cb-pbox span:empty{display:none;}
+  /* Admin -> Customers / Promo codes / Opening hours */
+  .export-bar{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center;}
+  .export-range{display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; font-size:12px; color:var(--muted);}
+  .export-range input{background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 8px; font:inherit;}
+  .table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  .cust-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .cust-table th{text-align:start; font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  .cust-table td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  .cust-table td.num{text-align:end; white-space:nowrap;}
+  .cust-table input[type=text], .cust-table input[type=number], .cust-table input[type=date], .cust-table input[type=time], .cust-table select{background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 8px; font:inherit; max-width:140px;}
+  .promo-table input.code-input{text-transform:uppercase; width:120px;}
+  .promo-table input[type=number]{width:84px;}
+  .opt-yes{color:#6fcf97; font-weight:700;}
+  .hours-now{margin:0 0 12px; font-weight:700;}
+  .hours-now.is-open{color:#6fcf97;} .hours-now.is-closed{color:#e0716d;}
+  .hours-modes{display:flex; flex-direction:column; gap:8px; margin-bottom:12px;}
+  .hours-modes label{display:flex; align-items:center; gap:8px; cursor:pointer;}
+  #hoursBody, #hoursBody tr{display:block;}
+  #hoursBody tr{display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; padding:10px 0; border-bottom:1px solid var(--line, rgba(255,255,255,.08));}
+  #hoursBody td{display:block; padding:0; border:0;}
+  #hoursBody td:first-child{flex:0 0 100%;}
+  #hoursBody td label{display:inline-flex; align-items:center; gap:6px; flex-direction:row;}
+  #hoursBody input[type=time]{width:auto;}
+  .hours-messages{display:grid; gap:8px;}
+  .hours-messages label{display:grid; gap:3px; font-size:11px; color:var(--muted);}
+  .hours-messages input{width:100%; box-sizing:border-box;}
+  .opt-badge{display:inline-block; background:#16351f; color:#6fcf97; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; margin-top:4px;}
 </style>
 </head>
 <body>
@@ -332,6 +359,9 @@
     <nav class="admin-nav" aria-label="Admin sections" data-ui-aria-label="adminSections">
       <button class="admin-tab active" data-panel="ordersPanel" type="button" data-ui="orders">Orders</button>
       <button class="admin-tab" data-panel="deliverySettingsPanel" type="button" data-ui="deliveryTab">Delivery</button>
+      <button class="admin-tab" data-panel="customersPanel" type="button" data-ui="custTab">Customers</button>
+      <button class="admin-tab" data-panel="promoPanel" type="button" data-ui="promoTab">Promo codes</button>
+      <button class="admin-tab" data-panel="hoursPanel" type="button" data-ui="hoursTab">Opening hours</button>
       <button class="admin-tab" data-panel="cartBoxesPanel" type="button" data-ui="cbTab">Cart boxes</button>
       <button class="admin-tab" data-panel="categoriesPanel" type="button" data-ui="categories">Categories</button>
       <button class="admin-tab" data-panel="menuPanel" type="button" data-ui="menuItems">Menu items</button>
@@ -346,10 +376,59 @@
     <div class="filters" id="statusFilters"></div>
     <div class="toolbar">
       <span class="count" id="orderCount"></span>
+      <button id="exportOrdersBtn" class="action-btn" type="button" data-ui="ordersExport">Export orders (CSV)</button>
       <input class="search-input" id="orderSearch" type="search" placeholder="Search order no. or phone" data-ui-placeholder="searchOrders">
       <button id="refreshBtn" style="background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:12px; cursor:pointer;" data-ui="refresh">Refresh</button>
     </div>
     <div id="ordersList"></div>
+    </section>
+
+    <section class="admin-panel" id="customersPanel" hidden>
+      <div class="panel-title"><h2 data-ui="custTitle">Customers</h2></div>
+      <div class="manager-form">
+        <p class="form-note" style="margin:0 0 12px;" data-ui="custHelp">Everyone who paid for an order, one row per mobile number. Download the list any time.</p>
+        <div class="export-bar">
+          <button class="action-btn primary" id="exportCustomersBtn" type="button" data-ui="custExport">Export customers (CSV)</button>
+          <span class="export-range"><label><span data-ui="expFrom">From</span> <input type="date" id="exportFrom"></label>
+          <label><span data-ui="expTo">To</span> <input type="date" id="exportTo"></label>
+          <button class="action-btn" id="exportOrdersRangeBtn" type="button" data-ui="ordersExport">Export orders (CSV)</button></span>
+        </div>
+        <div class="toolbar" style="margin-top:12px;">
+          <span class="count" id="custCount"></span>
+          <input class="search-input" id="custSearch" type="search" data-ui-placeholder="custSearch" placeholder="Search name or mobile">
+        </div>
+        <p class="form-note" id="custNote" role="status"></p>
+        <div class="table-scroll"><table class="cust-table"><thead><tr id="custHead"></tr></thead><tbody id="custBody"></tbody></table></div>
+      </div>
+    </section>
+
+    <section class="admin-panel" id="promoPanel" hidden>
+      <div class="panel-title"><h2 data-ui="promoTitle">Promo codes</h2></div>
+      <div class="manager-form">
+        <p class="form-note" style="margin:0 0 12px;" data-ui="promoHelp">Customers type a code at checkout. The discount applies to the food only, not delivery. The promo box appears at checkout only while at least one code is active.</p>
+        <div class="table-scroll"><table class="cust-table promo-table"><thead><tr id="promoHead"></tr></thead><tbody id="promoBody"></tbody></table></div>
+        <div class="form-actions">
+          <button class="action-btn" id="promoAddBtn" type="button" data-ui="promoAdd">Add code</button>
+          <button class="action-btn primary" id="promoSaveBtn" type="button" data-ui="promoSave">Save promo codes</button>
+          <span class="form-note" id="promoAdminNote" role="status"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-panel" id="hoursPanel" hidden>
+      <div class="panel-title"><h2 data-ui="hoursTitle">Opening hours</h2></div>
+      <div class="manager-form">
+        <p class="form-note" style="margin:0 0 12px;" data-ui="hoursHelp">While the restaurant is closed, customers see a notice and cannot place orders. Times are Saudi time (Riyadh). A closing time earlier than the opening time means after midnight.</p>
+        <p class="hours-now" id="hoursNow" role="status"></p>
+        <div class="hours-modes" id="hoursModes"></div>
+        <div class="table-scroll"><table class="cust-table"><tbody id="hoursBody"></tbody></table></div>
+        <p class="form-note" style="margin:14px 0 6px;" data-ui="hoursMessage">Message shown when closed (optional, leave empty for the automatic text)</p>
+        <div class="hours-messages" id="hoursMessages"></div>
+        <div class="form-actions">
+          <button class="action-btn primary" id="hoursSaveBtn" type="button" data-ui="hoursSave">Save opening hours</button>
+          <span class="form-note" id="hoursNote" role="status"></span>
+        </div>
+      </div>
     </section>
 
     <section class="admin-panel" id="cartBoxesPanel" hidden>
@@ -1304,7 +1383,7 @@ const POSTER_ADMIN_STRINGS = {
 Object.keys(POSTER_ADMIN_STRINGS).forEach(code => Object.assign(ADMIN_UI_STRINGS[code], POSTER_ADMIN_STRINGS[code]));
 
 const DELIVERY_ADMIN_STRINGS = {
-  en: { cbTab:'Cart boxes', cbTitle:'Cart boxes', cbHelp:'Edit the two big boxes at the top of the basket. Pick a language, type the texts, and watch the preview. Leave a field empty to use the built-in text.', cbPreview:'Preview (as the customer sees it)', cbColor:'Outline colour', cbSave:'Save cart boxes', cbClearLang:'Use built-in texts for this language', cbSaving:'Saving…', cbSaved:'Saved. The basket shows the new texts now.', cbSaveFailed:'Could not save the cart boxes.', cbLoadFailed:'Could not load the cart boxes.', cbBoxDelivery:'Left box: Home Delivery', cbBoxPickup:'Right box: Pick Up', cbFieldTitle:'Title', cbFieldLine1:'Line 1', cbFieldLine2:'Line 2', cbFieldLine3:'Line 3', deliveryTab:'Delivery', deliveryTitle:'Delivery cost', deliveryHint:'Choose whether to charge a delivery fee and set the amount. Pickup remains free.',
+  en: { custTab:'Customers', promoTab:'Promo codes', hoursTab:'Opening hours', custTitle:'Customers', custHelp:'Everyone who paid for an order, one row per mobile number. Download the list any time.', custExport:'Export customers (CSV)', ordersExport:'Export orders (CSV)', expFrom:'From', expTo:'To', custSearch:'Search name or mobile', custName:'Name', custPhone:'Mobile', custOptin:'WhatsApp opt-in', custOrders:'Orders', custSpent:'Spent', custLast:'Last order', custAddress:'Last address', custEmpty:'No customers yet.', custCount:'{count} customers', custCountOne:'1 customer', custNoOptinColumn:'To record the WhatsApp opt-in, run db/07_customers_promos.sql in Supabase once.', custLoadFailed:'Could not load the customers.', exportFailed:'Could not download the file. Please try again.', yesText:'Yes', printTicket:'Print ticket', optinBadge:'WhatsApp opt-in', discountWord:'Discount', promoTitle:'Promo codes', promoHelp:'Customers type a code at checkout. The discount applies to the food only, not delivery. The promo box appears at checkout only while at least one code is active.', promoCodeCol:'Code', promoTypeCol:'Type', promoTypePercent:'Percent %', promoTypeFixed:'Fixed amount', promoValueCol:'Value', promoMinCol:'Min order', promoMaxCol:'Max uses (0 = unlimited)', promoExpiresCol:'Expires', promoActiveCol:'Active', promoUsedCol:'Used', promoAdd:'Add code', promoSave:'Save promo codes', promoSaved:'Saved.', promoSaving:'Saving…', promoDelete:'Delete', promoNone:'No promo codes yet.', promoLoadFailed:'Could not load the promo codes.', promoSaveFailed:'Could not save the promo codes.', hoursTitle:'Opening hours', hoursHelp:'While the restaurant is closed, customers see a notice and cannot place orders. Times are Saudi time (Riyadh). A closing time earlier than the opening time means after midnight.', hoursModeOpen:'Always taking orders', hoursModeSchedule:'Follow the weekly hours below', hoursModeClosed:'Closed now (pause all orders)', hoursNowOpen:'Right now: taking orders', hoursNowClosed:'Right now: closed', hoursClosedDay:'Closed', hoursOpenCol:'Opens', hoursCloseCol:'Closes', hoursMessage:'Message shown when closed (optional, leave empty for the automatic text)', hoursSave:'Save opening hours', hoursSaved:'Saved. The menu page follows these hours now.', hoursSaving:'Saving…', hoursLoadFailed:'Could not load the opening hours.', hoursSaveFailed:'Could not save the opening hours.', cbTab:'Cart boxes', cbTitle:'Cart boxes', cbHelp:'Edit the two big boxes at the top of the basket. Pick a language, type the texts, and watch the preview. Leave a field empty to use the built-in text.', cbPreview:'Preview (as the customer sees it)', cbColor:'Outline colour', cbSave:'Save cart boxes', cbClearLang:'Use built-in texts for this language', cbSaving:'Saving…', cbSaved:'Saved. The basket shows the new texts now.', cbSaveFailed:'Could not save the cart boxes.', cbLoadFailed:'Could not load the cart boxes.', cbBoxDelivery:'Left box: Home Delivery', cbBoxPickup:'Right box: Pick Up', cbFieldTitle:'Title', cbFieldLine1:'Line 1', cbFieldLine2:'Line 2', cbFieldLine3:'Line 3', deliveryTab:'Delivery', deliveryTitle:'Delivery cost', deliveryHint:'Choose whether to charge a delivery fee and set the amount. Pickup remains free.',
     deliveryCharge:'Charge a delivery fee', deliveryFee:'Delivery fee', deliverySave:'Save delivery settings',
     zoneEnable:'Only deliver inside the delivery area',
     zoneOk:'The delivery area is active. It is placed around the restaurant pin saved in Contact, so moving the pin moves the area. Customers drop a pin at checkout and cannot pay for delivery outside it.',
@@ -1314,7 +1393,7 @@ const DELIVERY_ADMIN_STRINGS = {
     zoneApprox:'The shape is still approximate: please check it on the checkout map.',
     deliverySaved:'Delivery settings saved.', deliverySaving:'Saving...', deliveryLoadFailed:'Could not load delivery settings.',
     deliverySaveFailed:'Could not save delivery settings.', deliveryAmountInvalid:'Enter a non-negative amount with at most two decimal places.' },
-  ar: { cbTab:'صناديق السلة', cbTitle:'صناديق السلة', cbHelp:'عدّل الصندوقين الكبيرين أعلى السلة. اختر اللغة واكتب النصوص وشاهد المعاينة. اترك الحقل فارغاً لاستخدام النص الافتراضي.', cbPreview:'معاينة (كما يراها العميل)', cbColor:'لون الإطار', cbSave:'حفظ صناديق السلة', cbClearLang:'استخدام النصوص الافتراضية لهذه اللغة', cbSaving:'جارٍ الحفظ…', cbSaved:'تم الحفظ. تظهر النصوص الجديدة في السلة الآن.', cbSaveFailed:'تعذر حفظ صناديق السلة.', cbLoadFailed:'تعذر تحميل صناديق السلة.', cbBoxDelivery:'الصندوق الأيسر: توصيل للمنزل', cbBoxPickup:'الصندوق الأيمن: استلام', cbFieldTitle:'العنوان', cbFieldLine1:'السطر 1', cbFieldLine2:'السطر 2', cbFieldLine3:'السطر 3', deliveryTab:'التوصيل', deliveryTitle:'رسوم التوصيل', deliveryHint:'اختر ما إذا كنت تريد فرض رسوم توصيل وحدد المبلغ. الاستلام من الفرع مجاني.',
+  ar: { custTab:'العملاء', promoTab:'أكواد الخصم', hoursTab:'ساعات العمل', custTitle:'العملاء', custHelp:'كل من دفع ثمن طلب، صف واحد لكل رقم جوال. حمّل القائمة في أي وقت.', custExport:'تصدير العملاء (CSV)', ordersExport:'تصدير الطلبات (CSV)', expFrom:'من', expTo:'إلى', custSearch:'ابحث بالاسم أو الجوال', custName:'الاسم', custPhone:'الجوال', custOptin:'موافقة واتساب', custOrders:'الطلبات', custSpent:'المبلغ المنفق', custLast:'آخر طلب', custAddress:'آخر عنوان', custEmpty:'لا يوجد عملاء بعد.', custCount:'{count} عميل', custCountOne:'عميل واحد', custNoOptinColumn:'لتسجيل موافقة واتساب، شغّل الملف db/07_customers_promos.sql في Supabase مرة واحدة.', custLoadFailed:'تعذر تحميل العملاء.', exportFailed:'تعذر تنزيل الملف. حاول مرة أخرى.', yesText:'نعم', printTicket:'طباعة التذكرة', optinBadge:'موافقة واتساب', discountWord:'الخصم', promoTitle:'أكواد الخصم', promoHelp:'يكتب العميل الكود عند الدفع. يُطبّق الخصم على الطعام فقط وليس على التوصيل. يظهر مربع الكود عند الدفع فقط إذا وُجد كود فعّال واحد على الأقل.', promoCodeCol:'الكود', promoTypeCol:'النوع', promoTypePercent:'نسبة %', promoTypeFixed:'مبلغ ثابت', promoValueCol:'القيمة', promoMinCol:'الحد الأدنى للطلب', promoMaxCol:'أقصى استخدام (0 = غير محدود)', promoExpiresCol:'ينتهي', promoActiveCol:'فعّال', promoUsedCol:'استُخدم', promoAdd:'إضافة كود', promoSave:'حفظ أكواد الخصم', promoSaved:'تم الحفظ.', promoSaving:'جارٍ الحفظ…', promoDelete:'حذف', promoNone:'لا توجد أكواد خصم بعد.', promoLoadFailed:'تعذر تحميل أكواد الخصم.', promoSaveFailed:'تعذر حفظ أكواد الخصم.', hoursTitle:'ساعات العمل', hoursHelp:'عندما يكون المطعم مغلقاً يرى العملاء إشعاراً ولا يمكنهم إرسال الطلبات. الأوقات بتوقيت السعودية (الرياض). وقت الإغلاق الأبكر من وقت الفتح يعني ما بعد منتصف الليل.', hoursModeOpen:'نستقبل الطلبات دائماً', hoursModeSchedule:'اتباع الساعات الأسبوعية أدناه', hoursModeClosed:'مغلق الآن (إيقاف كل الطلبات)', hoursNowOpen:'الآن: نستقبل الطلبات', hoursNowClosed:'الآن: مغلق', hoursClosedDay:'مغلق', hoursOpenCol:'يفتح', hoursCloseCol:'يغلق', hoursMessage:'رسالة تظهر عند الإغلاق (اختيارية، اتركها فارغة للنص التلقائي)', hoursSave:'حفظ ساعات العمل', hoursSaved:'تم الحفظ. صفحة القائمة تتبع هذه الساعات الآن.', hoursSaving:'جارٍ الحفظ…', hoursLoadFailed:'تعذر تحميل ساعات العمل.', hoursSaveFailed:'تعذر حفظ ساعات العمل.', cbTab:'صناديق السلة', cbTitle:'صناديق السلة', cbHelp:'عدّل الصندوقين الكبيرين أعلى السلة. اختر اللغة واكتب النصوص وشاهد المعاينة. اترك الحقل فارغاً لاستخدام النص الافتراضي.', cbPreview:'معاينة (كما يراها العميل)', cbColor:'لون الإطار', cbSave:'حفظ صناديق السلة', cbClearLang:'استخدام النصوص الافتراضية لهذه اللغة', cbSaving:'جارٍ الحفظ…', cbSaved:'تم الحفظ. تظهر النصوص الجديدة في السلة الآن.', cbSaveFailed:'تعذر حفظ صناديق السلة.', cbLoadFailed:'تعذر تحميل صناديق السلة.', cbBoxDelivery:'الصندوق الأيسر: توصيل للمنزل', cbBoxPickup:'الصندوق الأيمن: استلام', cbFieldTitle:'العنوان', cbFieldLine1:'السطر 1', cbFieldLine2:'السطر 2', cbFieldLine3:'السطر 3', deliveryTab:'التوصيل', deliveryTitle:'رسوم التوصيل', deliveryHint:'اختر ما إذا كنت تريد فرض رسوم توصيل وحدد المبلغ. الاستلام من الفرع مجاني.',
     deliveryCharge:'فرض رسوم توصيل', deliveryFee:'رسوم التوصيل', deliverySave:'حفظ إعدادات التوصيل',
     zoneEnable:'التوصيل داخل منطقة التوصيل فقط',
     zoneOk:'منطقة التوصيل مفعّلة. تُحدَّد حول دبوس المطعم المحفوظ في صفحة التواصل، فتنتقل المنطقة عند تحريك الدبوس. يضع العميل دبوساً عند إتمام الطلب ولا يمكنه الدفع للتوصيل خارج المنطقة.',
@@ -1324,7 +1403,7 @@ const DELIVERY_ADMIN_STRINGS = {
     zoneApprox:'شكل المنطقة تقريبي حتى الآن: يرجى مراجعته على خريطة إتمام الطلب.',
     deliverySaved:'تم حفظ إعدادات التوصيل.', deliverySaving:'جارٍ الحفظ...', deliveryLoadFailed:'تعذّر تحميل إعدادات التوصيل.',
     deliverySaveFailed:'تعذّر حفظ إعدادات التوصيل.', deliveryAmountInvalid:'أدخل مبلغاً غير سالب وبحد أقصى منزلتين عشريتين.' },
-  ur: { cbTab:'کارٹ باکسز', cbTitle:'کارٹ باکسز', cbHelp:'ٹوکری کے اوپر والے دونوں بڑے باکس تبدیل کریں۔ زبان منتخب کریں، متن لکھیں اور پیش منظر دیکھیں۔ پہلے سے موجود متن کے لیے خانہ خالی چھوڑ دیں۔', cbPreview:'پیش منظر (جیسا گاہک دیکھتا ہے)', cbColor:'کنارے کا رنگ', cbSave:'کارٹ باکسز محفوظ کریں', cbClearLang:'اس زبان کے لیے پہلے سے موجود متن استعمال کریں', cbSaving:'محفوظ ہو رہا ہے…', cbSaved:'محفوظ ہو گیا۔ ٹوکری میں اب نیا متن نظر آتا ہے۔', cbSaveFailed:'کارٹ باکسز محفوظ نہیں ہو سکے۔', cbLoadFailed:'کارٹ باکسز لوڈ نہیں ہو سکے۔', cbBoxDelivery:'بایاں باکس: ہوم ڈیلیوری', cbBoxPickup:'دایاں باکس: پک اپ', cbFieldTitle:'عنوان', cbFieldLine1:'سطر 1', cbFieldLine2:'سطر 2', cbFieldLine3:'سطر 3', deliveryTab:'ڈیلیوری', deliveryTitle:'ڈیلیوری فیس', deliveryHint:'منتخب کریں کہ ڈیلیوری فیس لینی ہے یا نہیں، اور رقم درج کریں۔ برانچ سے پک اَپ مفت ہے۔',
+  ur: { custTab:'کسٹمرز', promoTab:'پرومو کوڈز', hoursTab:'اوقاتِ کار', custTitle:'کسٹمرز', custHelp:'ہر وہ شخص جس نے آرڈر کی ادائیگی کی، ہر موبائل نمبر کی ایک قطار۔ فہرست کبھی بھی ڈاؤن لوڈ کریں۔', custExport:'کسٹمرز ایکسپورٹ (CSV)', ordersExport:'آرڈرز ایکسپورٹ (CSV)', expFrom:'از', expTo:'تک', custSearch:'نام یا موبائل تلاش کریں', custName:'نام', custPhone:'موبائل', custOptin:'واٹس ایپ اجازت', custOrders:'آرڈرز', custSpent:'کل خرچ', custLast:'آخری آرڈر', custAddress:'آخری پتہ', custEmpty:'ابھی کوئی کسٹمر نہیں۔', custCount:'{count} کسٹمرز', custCountOne:'1 کسٹمر', custNoOptinColumn:'واٹس ایپ اجازت محفوظ کرنے کے لیے Supabase میں db/07_customers_promos.sql ایک بار چلائیں۔', custLoadFailed:'کسٹمرز لوڈ نہیں ہو سکے۔', exportFailed:'فائل ڈاؤن لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔', yesText:'ہاں', printTicket:'ٹکٹ پرنٹ کریں', optinBadge:'واٹس ایپ اجازت', discountWord:'رعایت', promoTitle:'پرومو کوڈز', promoHelp:'گاہک چیک آؤٹ پر کوڈ لکھتا ہے۔ رعایت صرف کھانے پر لگتی ہے، ڈیلیوری پر نہیں۔ پرومو باکس چیک آؤٹ پر تب ہی دکھتا ہے جب کم از کم ایک کوڈ فعال ہو۔', promoCodeCol:'کوڈ', promoTypeCol:'قسم', promoTypePercent:'فیصد %', promoTypeFixed:'مقررہ رقم', promoValueCol:'مقدار', promoMinCol:'کم از کم آرڈر', promoMaxCol:'زیادہ سے زیادہ استعمال (0 = لامحدود)', promoExpiresCol:'میعاد', promoActiveCol:'فعال', promoUsedCol:'استعمال', promoAdd:'کوڈ شامل کریں', promoSave:'پرومو کوڈز محفوظ کریں', promoSaved:'محفوظ ہو گیا۔', promoSaving:'محفوظ ہو رہا ہے…', promoDelete:'حذف', promoNone:'ابھی کوئی پرومو کوڈ نہیں۔', promoLoadFailed:'پرومو کوڈز لوڈ نہیں ہو سکے۔', promoSaveFailed:'پرومو کوڈز محفوظ نہیں ہو سکے۔', hoursTitle:'اوقاتِ کار', hoursHelp:'ریسٹورنٹ بند ہونے پر گاہک کو اطلاع نظر آتی ہے اور وہ آرڈر نہیں دے سکتے۔ اوقات سعودی وقت (ریاض) کے ہیں۔ بند ہونے کا وقت کھلنے سے پہلے ہو تو مطلب آدھی رات کے بعد ہے۔', hoursModeOpen:'ہمیشہ آرڈر لیے جاتے ہیں', hoursModeSchedule:'نیچے دیے ہفتہ وار اوقات کے مطابق', hoursModeClosed:'ابھی بند (تمام آرڈرز روک دیں)', hoursNowOpen:'اس وقت: آرڈر لیے جا رہے ہیں', hoursNowClosed:'اس وقت: بند', hoursClosedDay:'بند', hoursOpenCol:'کھلنے کا وقت', hoursCloseCol:'بند ہونے کا وقت', hoursMessage:'بند ہونے پر دکھایا جانے والا پیغام (اختیاری، خودکار متن کے لیے خالی چھوڑیں)', hoursSave:'اوقاتِ کار محفوظ کریں', hoursSaved:'محفوظ ہو گیا۔ مینو صفحہ اب ان اوقات پر چلتا ہے۔', hoursSaving:'محفوظ ہو رہا ہے…', hoursLoadFailed:'اوقاتِ کار لوڈ نہیں ہو سکے۔', hoursSaveFailed:'اوقاتِ کار محفوظ نہیں ہو سکے۔', cbTab:'کارٹ باکسز', cbTitle:'کارٹ باکسز', cbHelp:'ٹوکری کے اوپر والے دونوں بڑے باکس تبدیل کریں۔ زبان منتخب کریں، متن لکھیں اور پیش منظر دیکھیں۔ پہلے سے موجود متن کے لیے خانہ خالی چھوڑ دیں۔', cbPreview:'پیش منظر (جیسا گاہک دیکھتا ہے)', cbColor:'کنارے کا رنگ', cbSave:'کارٹ باکسز محفوظ کریں', cbClearLang:'اس زبان کے لیے پہلے سے موجود متن استعمال کریں', cbSaving:'محفوظ ہو رہا ہے…', cbSaved:'محفوظ ہو گیا۔ ٹوکری میں اب نیا متن نظر آتا ہے۔', cbSaveFailed:'کارٹ باکسز محفوظ نہیں ہو سکے۔', cbLoadFailed:'کارٹ باکسز لوڈ نہیں ہو سکے۔', cbBoxDelivery:'بایاں باکس: ہوم ڈیلیوری', cbBoxPickup:'دایاں باکس: پک اپ', cbFieldTitle:'عنوان', cbFieldLine1:'سطر 1', cbFieldLine2:'سطر 2', cbFieldLine3:'سطر 3', deliveryTab:'ڈیلیوری', deliveryTitle:'ڈیلیوری فیس', deliveryHint:'منتخب کریں کہ ڈیلیوری فیس لینی ہے یا نہیں، اور رقم درج کریں۔ برانچ سے پک اَپ مفت ہے۔',
     deliveryCharge:'ڈیلیوری فیس وصول کریں', deliveryFee:'ڈیلیوری فیس', deliverySave:'ڈیلیوری کی ترتیبات محفوظ کریں',
     zoneEnable:'صرف ڈیلیوری کے علاقے کے اندر ڈیلیوری کریں',
     zoneOk:'ڈیلیوری کا علاقہ فعال ہے۔ یہ رابطہ صفحے میں محفوظ ریستوران کے پن کے گرد بنتا ہے، اس لیے پن ہٹانے سے علاقہ بھی ہٹ جاتا ہے۔ گاہک چیک آؤٹ پر پن لگاتا ہے اور علاقے سے باہر ڈیلیوری کی ادائیگی نہیں کر سکتا۔',
@@ -1334,7 +1413,7 @@ const DELIVERY_ADMIN_STRINGS = {
     zoneApprox:'علاقے کی شکل ابھی تخمینی ہے: براہ کرم چیک آؤٹ کے نقشے پر اسے جانچ لیں۔',
     deliverySaved:'ڈیلیوری کی ترتیبات محفوظ ہو گئیں۔', deliverySaving:'محفوظ ہو رہا ہے...', deliveryLoadFailed:'ڈیلیوری کی ترتیبات لوڈ نہیں ہو سکیں۔',
     deliverySaveFailed:'ڈیلیوری کی ترتیبات محفوظ نہیں ہو سکیں۔', deliveryAmountInvalid:'صفر یا اس سے زیادہ رقم درج کریں، زیادہ سے زیادہ دو اعشاری ہندسوں کے ساتھ۔' },
-  zh: { cbTab:'购物车方框', cbTitle:'购物车方框', cbHelp:'编辑购物车顶部的两个大方框。选择语言、输入文字并查看预览。留空则使用内置文字。', cbPreview:'预览（顾客看到的样子）', cbColor:'边框颜色', cbSave:'保存购物车方框', cbClearLang:'此语言使用内置文字', cbSaving:'正在保存…', cbSaved:'已保存。购物车现在显示新文字。', cbSaveFailed:'无法保存购物车方框。', cbLoadFailed:'无法加载购物车方框。', cbBoxDelivery:'左侧方框：送货上门', cbBoxPickup:'右侧方框：到店自取', cbFieldTitle:'标题', cbFieldLine1:'第 1 行', cbFieldLine2:'第 2 行', cbFieldLine3:'第 3 行', deliveryTab:'配送', deliveryTitle:'配送费用', deliveryHint:'选择是否收取配送费并设置金额。到店自取免费。',
+  zh: { custTab:'客户', promoTab:'优惠码', hoursTab:'营业时间', custTitle:'客户', custHelp:'所有已付款下单的客户，每个手机号一行。可随时下载名单。', custExport:'导出客户 (CSV)', ordersExport:'导出订单 (CSV)', expFrom:'从', expTo:'到', custSearch:'搜索姓名或手机号', custName:'姓名', custPhone:'手机号', custOptin:'WhatsApp 同意', custOrders:'订单数', custSpent:'消费总额', custLast:'最近订单', custAddress:'最近地址', custEmpty:'暂无客户。', custCount:'{count} 位客户', custCountOne:'1 位客户', custNoOptinColumn:'要记录 WhatsApp 同意，请在 Supabase 运行一次 db/07_customers_promos.sql。', custLoadFailed:'无法加载客户。', exportFailed:'无法下载文件，请重试。', yesText:'是', printTicket:'打印小票', optinBadge:'WhatsApp 同意', discountWord:'优惠', promoTitle:'优惠码', promoHelp:'顾客在结账时输入优惠码。优惠只适用于餐品，不含配送费。只有至少有一个启用的优惠码时，结账页才显示优惠码输入框。', promoCodeCol:'优惠码', promoTypeCol:'类型', promoTypePercent:'百分比 %', promoTypeFixed:'固定金额', promoValueCol:'数值', promoMinCol:'最低订单额', promoMaxCol:'最多使用次数（0 = 不限）', promoExpiresCol:'到期日', promoActiveCol:'启用', promoUsedCol:'已使用', promoAdd:'添加优惠码', promoSave:'保存优惠码', promoSaved:'已保存。', promoSaving:'正在保存…', promoDelete:'删除', promoNone:'暂无优惠码。', promoLoadFailed:'无法加载优惠码。', promoSaveFailed:'无法保存优惠码。', hoursTitle:'营业时间', hoursHelp:'打烊时顾客会看到提示且不能下单。时间为沙特时间（利雅得）。关门时间早于开门时间表示过了午夜。', hoursModeOpen:'始终接单', hoursModeSchedule:'按下方每周营业时间', hoursModeClosed:'现在打烊（暂停所有订单）', hoursNowOpen:'当前：接单中', hoursNowClosed:'当前：已打烊', hoursClosedDay:'休息', hoursOpenCol:'开门', hoursCloseCol:'关门', hoursMessage:'打烊时显示的提示（可选，留空则用自动文字）', hoursSave:'保存营业时间', hoursSaved:'已保存。菜单页现在按此时间运行。', hoursSaving:'正在保存…', hoursLoadFailed:'无法加载营业时间。', hoursSaveFailed:'无法保存营业时间。', cbTab:'购物车方框', cbTitle:'购物车方框', cbHelp:'编辑购物车顶部的两个大方框。选择语言、输入文字并查看预览。留空则使用内置文字。', cbPreview:'预览（顾客看到的样子）', cbColor:'边框颜色', cbSave:'保存购物车方框', cbClearLang:'此语言使用内置文字', cbSaving:'正在保存…', cbSaved:'已保存。购物车现在显示新文字。', cbSaveFailed:'无法保存购物车方框。', cbLoadFailed:'无法加载购物车方框。', cbBoxDelivery:'左侧方框：送货上门', cbBoxPickup:'右侧方框：到店自取', cbFieldTitle:'标题', cbFieldLine1:'第 1 行', cbFieldLine2:'第 2 行', cbFieldLine3:'第 3 行', deliveryTab:'配送', deliveryTitle:'配送费用', deliveryHint:'选择是否收取配送费并设置金额。到店自取免费。',
     deliveryCharge:'收取配送费', deliveryFee:'配送费', deliverySave:'保存配送设置',
     zoneEnable:'仅在配送范围内送货',
     zoneOk:'配送范围已启用。它以“联系方式”中保存的餐厅图钉为中心，移动图钉范围也会随之移动。顾客在结账时放置图钉，范围之外无法支付送货订单。',
@@ -1678,7 +1757,7 @@ function renderOrders(orders){
         <div class="order-body">
           <div class="col">
             <strong>${adminText('contact')}</strong>
-            ${escapeHtml(order.customer_phone)}<br>${typeLine}
+            ${escapeHtml(order.customer_phone)}<br>${typeLine}${order.whatsapp_optin ? `<br><span class="opt-badge">✓ ${adminText('optinBadge')}</span>` : ''}
           </div>
           <div class="col">
             <strong>${adminText('items')}</strong>
@@ -1686,10 +1765,11 @@ function renderOrders(orders){
           </div>
         </div>
         <div class="order-totals">
-          ${adminText('subtotal')} ${money(order.subtotal)} · ${adminText('total')} <b>${money(order.total)}</b> · ${adminText('payment')}: ${escapeHtml(adminText(order.payment_status === 'pending' ? 'paymentPending' : order.payment_status === 'failed' ? 'paymentFailed' : order.payment_status))}
+          ${adminText('subtotal')} ${money(order.subtotal)}${Number(order.discount) > 0 ? ` · ${adminText('discountWord')} −${money(order.discount)}${order.promo_code ? ` (${escapeHtml(order.promo_code)})` : ''}` : ''} · ${adminText('total')} <b>${money(order.total)}</b> · ${adminText('payment')}: ${escapeHtml(adminText(order.payment_status === 'pending' ? 'paymentPending' : order.payment_status === 'failed' ? 'paymentFailed' : order.payment_status))}
         </div>
         <div class="status-row">
           <select data-id="${order.id}">${statusOptions}</select>
+          <button class="action-btn" type="button" data-print-order="${order.id}">🖨 ${adminText('printTicket')}</button>
           <button class="action-btn danger" type="button" data-delete-order="${order.id}" ${order.status === 'cancelled' ? '' : 'hidden'}>${adminText('deleteOrder')}</button>
           <span class="save-note"></span>
         </div>
@@ -1770,6 +1850,9 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
     if(tab.dataset.panel === 'contactPanel') loadContact();
     if(tab.dataset.panel === 'deliverySettingsPanel') loadDeliverySettings();
     if(tab.dataset.panel === 'cartBoxesPanel') loadCartBoxes();
+    if(tab.dataset.panel === 'customersPanel') loadCustomers();
+    if(tab.dataset.panel === 'promoPanel') loadPromoCodes();
+    if(tab.dataset.panel === 'hoursPanel') loadOpeningHours();
   });
 });
 
@@ -4347,6 +4430,242 @@ document.getElementById('cbSave').addEventListener('click', async ()=>{
   }finally{
     button.disabled = false;
   }
+});
+
+/* ---------- CSV downloads (Excel opens them; the files carry a UTF-8 marker so Arabic/Urdu/Chinese names are not garbled) ---------- */
+async function downloadCsv(path, params, button){
+  const qs = params && params.toString() ? `?${params}` : '';
+  if(button) button.disabled = true;
+  try{
+    const res = await fetch(`${API_BASE}/api/admin${path}${qs}`, { headers: authHeaders() });
+    if(res.status === 401 || res.status === 403){
+      token = ''; localStorage.removeItem(TOKEN_KEY); showLogin(adminText('sessionExpired'), true, 'sessionExpired'); return;
+    }
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const match = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = match ? match[1] : 'export.csv';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1500);
+  }catch(error){
+    window.alert(adminText('exportFailed'));
+  }finally{
+    if(button) button.disabled = false;
+  }
+}
+document.getElementById('exportOrdersBtn').addEventListener('click', event => downloadCsv('/export/orders.csv', null, event.currentTarget));
+document.getElementById('exportCustomersBtn').addEventListener('click', event => downloadCsv('/export/customers.csv', null, event.currentTarget));
+document.getElementById('exportOrdersRangeBtn').addEventListener('click', event => {
+  const params = new URLSearchParams();
+  const from = document.getElementById('exportFrom').value; const to = document.getElementById('exportTo').value;
+  if(from) params.set('from', from);
+  if(to) params.set('to', to);
+  downloadCsv('/export/orders.csv', params, event.currentTarget);
+});
+
+/* ---------- Customers ---------- */
+let customersData = [];
+function renderCustomers(){
+  const head = document.getElementById('custHead');
+  head.innerHTML = ['custName', 'custPhone', 'custOptin', 'custOrders', 'custSpent', 'custLast', 'custAddress'].map(k => `<th>${escapeHtml(adminText(k))}</th>`).join('');
+  const q = document.getElementById('custSearch').value.trim().toLowerCase();
+  const digits = q.replace(/\D/g, '');
+  const rows = customersData.filter(c => !q || String(c.name).toLowerCase().includes(q) || (digits && String(c.phone_digits || c.phone).includes(digits)));
+  const locale = ADMIN_DATE_LOCALES[adminUiLanguage];
+  document.getElementById('custCount').textContent = rows.length === 1 ? adminText('custCountOne') : adminText('custCount', { count: rows.length });
+  document.getElementById('custBody').innerHTML = rows.length ? rows.map(c => `
+    <tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td dir="ltr">${escapeHtml(c.phone)}</td>
+      <td>${c.whatsapp_optin ? `<span class="opt-yes">✓ ${escapeHtml(adminText('yesText'))}</span>` : '–'}</td>
+      <td class="num">${c.orders}</td>
+      <td class="num">${money(c.spent)}</td>
+      <td class="num">${escapeHtml(new Date(c.last_order).toLocaleDateString(locale))}</td>
+      <td>${escapeHtml(c.last_address || '')}</td>
+    </tr>`).join('') : `<tr><td colspan="7" class="empty">${escapeHtml(adminText('custEmpty'))}</td></tr>`;
+}
+async function loadCustomers(){
+  try{
+    const data = await adminRequest('/customers');
+    customersData = data.customers || [];
+    setFormNote('custNote', data.optinColumn === false ? adminText('custNoOptinColumn') : '');
+    renderCustomers();
+  }catch(error){
+    setFormNote('custNote', error.message || adminText('custLoadFailed'), true);
+  }
+}
+document.getElementById('custSearch').addEventListener('input', renderCustomers);
+
+/* ---------- Promo codes ---------- */
+let promoRows = [];
+function collectPromoRows(){
+  const rows = [...document.querySelectorAll('#promoBody tr[data-row]')];
+  if(!rows.length && !document.querySelector('#promoBody tr')) return;
+  promoRows = rows.map(tr => {
+    const get = k => tr.querySelector(`[data-k="${k}"]`);
+    return {
+      code: get('code').value.trim().toUpperCase(), type: get('type').value, value: get('value').value,
+      minOrder: get('minOrder').value, maxUses: get('maxUses').value, expiresAt: get('expiresAt').value,
+      active: get('active').checked, uses: Number(tr.dataset.uses) || 0,
+    };
+  });
+}
+function renderPromoRows(){
+  document.getElementById('promoHead').innerHTML = ['promoCodeCol', 'promoTypeCol', 'promoValueCol', 'promoMinCol', 'promoMaxCol', 'promoExpiresCol', 'promoActiveCol', 'promoUsedCol']
+    .map(k => `<th>${escapeHtml(adminText(k))}</th>`).join('') + '<th></th>';
+  const body = document.getElementById('promoBody');
+  if(!promoRows.length){ body.innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(adminText('promoNone'))}</td></tr>`; return; }
+  body.innerHTML = promoRows.map((r, i) => `
+    <tr data-row="${i}" data-uses="${Number(r.uses) || 0}">
+      <td><input class="code-input" data-k="code" type="text" maxlength="20" value="${escapeHtml(r.code)}"></td>
+      <td><select data-k="type"><option value="percent" ${r.type === 'percent' ? 'selected' : ''}>${escapeHtml(adminText('promoTypePercent'))}</option><option value="fixed" ${r.type === 'fixed' ? 'selected' : ''}>${escapeHtml(adminText('promoTypeFixed'))}</option></select></td>
+      <td><input data-k="value" type="number" min="0" step="0.01" value="${escapeHtml(r.value)}"></td>
+      <td><input data-k="minOrder" type="number" min="0" step="0.01" value="${escapeHtml(r.minOrder || 0)}"></td>
+      <td><input data-k="maxUses" type="number" min="0" step="1" value="${escapeHtml(r.maxUses || 0)}"></td>
+      <td><input data-k="expiresAt" type="date" value="${escapeHtml(r.expiresAt || '')}"></td>
+      <td><input data-k="active" type="checkbox" ${r.active !== false ? 'checked' : ''}></td>
+      <td class="num">${Number(r.uses) || 0}</td>
+      <td><button class="action-btn danger" type="button" data-promo-delete="${i}">${escapeHtml(adminText('promoDelete'))}</button></td>
+    </tr>`).join('');
+}
+async function loadPromoCodes(){
+  try{
+    promoRows = (await adminRequest('/promo-codes')).codes || [];
+    renderPromoRows();
+    setFormNote('promoAdminNote', '');
+  }catch(error){
+    setFormNote('promoAdminNote', error.message || adminText('promoLoadFailed'), true);
+  }
+}
+document.getElementById('promoAddBtn').addEventListener('click', () => {
+  collectPromoRows();
+  promoRows.push({ code: '', type: 'percent', value: 10, minOrder: 0, maxUses: 0, expiresAt: '', active: true, uses: 0 });
+  renderPromoRows();
+});
+document.getElementById('promoBody').addEventListener('click', event => {
+  const button = event.target.closest('[data-promo-delete]');
+  if(!button) return;
+  collectPromoRows();
+  promoRows.splice(Number(button.dataset.promoDelete), 1);
+  renderPromoRows();
+});
+document.getElementById('promoSaveBtn').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  collectPromoRows();
+  button.disabled = true;
+  setFormNote('promoAdminNote', adminText('promoSaving'));
+  try{
+    const body = { codes: promoRows.map(({ uses, ...row }) => row) };
+    promoRows = (await adminRequest('/promo-codes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).codes || [];
+    renderPromoRows();
+    setFormNote('promoAdminNote', adminText('promoSaved'));
+  }catch(error){
+    setFormNote('promoAdminNote', error.message || adminText('promoSaveFailed'), true);
+  }finally{
+    button.disabled = false;
+  }
+});
+
+/* ---------- Opening hours ---------- */
+let hoursData = null;
+function dayName(i){ return new Date(Date.UTC(2023, 0, 1 + i)).toLocaleDateString(ADMIN_DATE_LOCALES[adminUiLanguage], { weekday: 'long', timeZone: 'UTC' }); }
+function renderHours(status){
+  const now = document.getElementById('hoursNow');
+  if(status){
+    now.textContent = adminText(status.open ? 'hoursNowOpen' : 'hoursNowClosed');
+    now.className = `hours-now ${status.open ? 'is-open' : 'is-closed'}`;
+  }
+  document.getElementById('hoursModes').innerHTML = [['open', 'hoursModeOpen'], ['schedule', 'hoursModeSchedule'], ['closed', 'hoursModeClosed']]
+    .map(([value, key]) => `<label><input type="radio" name="hoursMode" value="${value}" ${hoursData.mode === value ? 'checked' : ''}> ${escapeHtml(adminText(key))}</label>`).join('');
+  document.getElementById('hoursBody').innerHTML = hoursData.days.map((d, i) => `
+    <tr data-day="${i}">
+      <td><b>${escapeHtml(dayName(i))}</b></td>
+      <td><label><input data-k="closed" type="checkbox" ${d.closed ? 'checked' : ''}> ${escapeHtml(adminText('hoursClosedDay'))}</label></td>
+      <td>${escapeHtml(adminText('hoursOpenCol'))} <input data-k="open" type="time" value="${escapeHtml(d.open)}"></td>
+      <td>${escapeHtml(adminText('hoursCloseCol'))} <input data-k="close" type="time" value="${escapeHtml(d.close)}"></td>
+    </tr>`).join('');
+  const names = { en: 'English', ar: 'العربية', ur: 'اردو', zh: '中文' };
+  document.getElementById('hoursMessages').innerHTML = ['en', 'ar', 'ur', 'zh'].map(l => `
+    <label>${names[l]}<input type="text" maxlength="140" data-msg="${l}" dir="${l === 'ar' || l === 'ur' ? 'rtl' : 'ltr'}" value="${escapeHtml((hoursData.message || {})[l] || '')}"></label>`).join('');
+}
+async function loadOpeningHours(){
+  try{
+    const data = await adminRequest('/opening-hours');
+    hoursData = data.settings;
+    renderHours(data.status);
+    setFormNote('hoursNote', '');
+  }catch(error){
+    setFormNote('hoursNote', error.message || adminText('hoursLoadFailed'), true);
+  }
+}
+document.getElementById('hoursSaveBtn').addEventListener('click', async event => {
+  if(!hoursData) return;
+  const button = event.currentTarget;
+  const mode = (document.querySelector('input[name="hoursMode"]:checked') || {}).value || 'open';
+  const days = [...document.querySelectorAll('#hoursBody tr[data-day]')].map(tr => ({
+    closed: tr.querySelector('[data-k="closed"]').checked, open: tr.querySelector('[data-k="open"]').value, close: tr.querySelector('[data-k="close"]').value,
+  }));
+  const message = {};
+  document.querySelectorAll('#hoursMessages [data-msg]').forEach(input => { message[input.dataset.msg] = input.value; });
+  button.disabled = true;
+  setFormNote('hoursNote', adminText('hoursSaving'));
+  try{
+    const data = await adminRequest('/opening-hours', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, days, message }) });
+    hoursData = data.settings;
+    renderHours(data.status);
+    setFormNote('hoursNote', adminText('hoursSaved'));
+  }catch(error){
+    setFormNote('hoursNote', error.message || adminText('hoursSaveFailed'), true);
+  }finally{
+    button.disabled = false;
+  }
+});
+
+/* ---------- Print kitchen ticket (one tap from an order card) ---------- */
+function ticketHtml(order){
+  const e = escapeHtml;
+  const when = new Date(order.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', dateStyle: 'medium', timeStyle: 'short' });
+  const isDelivery = order.delivery_type === 'delivery';
+  const items = (order.order_items || []).map(i => `<tr><td class="q">${Number(i.quantity)}×</td><td>${e(i.name_snapshot)}</td></tr>`).join('');
+  const discount = Number(order.discount) || 0;
+  const amount = n => `SAR ${Number(n).toFixed(2)}`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${e(order.order_number || order.id)}</title><style>
+    @page{margin:4mm;} body{font:13px/1.35 Arial,Helvetica,sans-serif; color:#000; width:72mm; margin:0 auto;}
+    h1{font-size:20px; margin:0 0 2px; text-align:center;} .c{text-align:center;} .big{font-size:18px; font-weight:700; text-align:center; border:2px solid #000; padding:4px; margin:6px 0;}
+    hr{border:0; border-top:1px dashed #000; margin:8px 0;} table{width:100%; border-collapse:collapse;} td{padding:3px 0; vertical-align:top; font-size:15px;}
+    td.q{width:34px; font-weight:700;} .row{display:flex; justify-content:space-between;} .small{font-size:12px;} .notes{border:1px solid #000; padding:4px; margin-top:6px; font-weight:700;}
+  </style></head><body>
+    <h1>RED HOUSE</h1>
+    <div class="c small">${e(when)}</div>
+    <div class="big">${e(order.order_number || '#' + order.id)}</div>
+    <div class="big">${isDelivery ? 'DELIVERY' : 'PICK UP'}</div>
+    <div><b>${e(order.customer_name)}</b><br><span dir="ltr">${e(order.customer_phone)}</span></div>
+    ${isDelivery ? `<div style="margin-top:4px;">${e(order.delivery_address || '')}</div>` : ''}
+    <hr><table>${items}</table><hr>
+    ${order.notes ? `<div class="notes">NOTE: ${e(order.notes)}</div>` : ''}
+    <div class="row small"><span>Subtotal</span><span>${amount(order.subtotal)}</span></div>
+    ${discount > 0 ? `<div class="row small"><span>Discount${order.promo_code ? ' (' + e(order.promo_code) + ')' : ''}</span><span>-${amount(discount)}</span></div>` : ''}
+    <div class="row"><b>Total</b><b>${amount(order.total)}</b></div>
+    <div class="c small" style="margin-top:6px;">${order.payment_status === 'paid' ? 'PAID ONLINE' : 'PAYMENT: ' + e(String(order.payment_status || '').toUpperCase())}</div>
+  </body></html>`;
+}
+function printTicket(order){
+  // a hidden frame, so there is no pop-up for the browser to block
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0;';
+  document.body.appendChild(frame);
+  const doc = frame.contentWindow.document;
+  doc.open(); doc.write(ticketHtml(order)); doc.close();
+  const go = () => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 2000); };
+  if(doc.readyState === 'complete') setTimeout(go, 50); else frame.onload = go;
+}
+document.getElementById('ordersList').addEventListener('click', event => {
+  const button = event.target.closest('[data-print-order]');
+  if(!button) return;
+  const order = currentOrders.find(o => String(o.id) === button.dataset.printOrder);
+  if(order) printTicket(order);
 });
 
 async function loadContact(){

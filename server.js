@@ -18,6 +18,9 @@ const musicRoutes = require('./routes/music');
 const posterRoutes = require('./routes/poster');
 const designRoutes = require('./routes/design');
 const geocodeRoutes = require('./routes/geocode');
+const promoRoutes = require('./routes/promo');
+const openingHours = require('./db/opening-hours');
+const promoCodes = require('./db/promo-codes');
 const { renderMenuPage } = require('./routes/menu-page-ssr');
 const { getDeliverySettings, CURRENCY } = require('./db/delivery-settings');
 const deliveryZone = require('./db/delivery-zone');
@@ -130,6 +133,12 @@ app.get('/admin', (req, res) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Is the restaurant taking orders right now? The menu page asks every minute so a long-open page shows "closed" in time.
+app.get('/api/open-status', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(await openingHours.getStatus().catch(() => ({ open: true, mode: 'open', nextOpen: null, message: {} })));
+});
+
 // Public, non-secret runtime config the frontend needs. Keeps
 // BRANCH_NAME/DELIVERY_FEE defined once, server-side,
 // instead of hardcoded in homepage.html.
@@ -164,6 +173,10 @@ app.get('/api/config', async (req, res) => {
     googleMapApiKey: (process.env.GOOGLE_MAP_API || '').trim(),
     // where home delivery is allowed; the checkout draws it and gives instant feedback, POST /api/orders enforces it
     // texts + outline colour of the two big cart boxes (Admin -> Cart boxes); built-in texts where nothing is saved
+    // Admin -> Opening hours: { open, mode, nextOpen: {dayOffset, dow, time}, message: {en, ar, ur, zh} } (open:true when nothing is set up)
+    openStatus: await openingHours.getStatus().catch(() => ({ open: true, mode: 'open', nextOpen: null, message: {} })),
+    // true when Admin -> Promo codes has at least one usable code: only then does checkout show the promo box
+    promoEnabled: await promoCodes.hasActiveCodes().catch(() => false),
     cartBoxes: await cartBoxes.getCartBoxes().catch(() => cartBoxes.merge(null)),
     deliveryZone: await deliveryZone.publicZone().catch((e) => { console.error('Could not resolve the delivery area:', e.message); return { enforced: false, center: null, geometry: null }; }),
   });
@@ -178,6 +191,7 @@ app.use('/api', musicRoutes);
 app.use('/api', posterRoutes);
 app.use('/api', designRoutes);
 app.use('/api', geocodeRoutes);
+app.use('/api', promoRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 

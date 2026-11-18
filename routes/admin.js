@@ -7,6 +7,9 @@ const { translateTexts, TranslateError } = require('../db/translate');
 const { getDeliverySettings, saveDeliverySettings, CURRENCY } = require('../db/delivery-settings');
 const deliveryZone = require('../db/delivery-zone');
 const cartBoxes = require('../db/choice-boxes');
+const promoCodes = require('../db/promo-codes');
+const openingHours = require('../db/opening-hours');
+const customers = require('../db/customers');
 
 const router = express.Router();
 
@@ -301,6 +304,87 @@ router.put('/delivery-settings', asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Could not save delivery settings:', error.message);
     res.status(500).json({ error: 'Could not save delivery settings.' });
+  }
+}));
+
+// ---- Customers + CSV exports (Admin -> Customers) ----
+// GET /api/admin/customers -> { customers: [...], optinColumn }   (built from paid orders, one row per phone number)
+router.get('/customers', asyncHandler(async (req, res) => {
+  try {
+    res.json(await customers.buildCustomers());
+  } catch (error) {
+    console.error('Could not build the customer list:', error.message);
+    res.status(500).json({ error: 'Could not load the customers.' });
+  }
+}));
+
+function sendCsv(res, filename, body) {
+  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'no-store' });
+  res.send(body);
+}
+const stamp = () => new Date().toISOString().slice(0, 10);
+
+router.get('/export/customers.csv', asyncHandler(async (req, res) => {
+  try {
+    const { customers: list } = await customers.buildCustomers();
+    sendCsv(res, `red-house-customers-${stamp()}.csv`, customers.customersCsv(list));
+  } catch (error) {
+    console.error('Could not export the customers:', error.message);
+    res.status(500).json({ error: 'Could not export the customers.' });
+  }
+}));
+
+// GET /api/admin/export/orders.csv?from=YYYY-MM-DD&to=YYYY-MM-DD  (both optional)
+router.get('/export/orders.csv', asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+  for (const d of [from, to]) {
+    if (d && !/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return res.status(400).json({ error: 'Dates must look like 2026-11-18.' });
+  }
+  try {
+    sendCsv(res, `red-house-orders-${stamp()}.csv`, await customers.buildOrdersCsv({ from, to }));
+  } catch (error) {
+    console.error('Could not export the orders:', error.message);
+    res.status(500).json({ error: 'Could not export the orders.' });
+  }
+}));
+
+// ---- Promo codes (Admin -> Promo codes) ----
+router.get('/promo-codes', asyncHandler(async (req, res) => {
+  try { res.json(await promoCodes.getAdminList()); } catch (error) {
+    console.error('Could not load the promo codes:', error.message);
+    res.status(500).json({ error: 'Could not load the promo codes.' });
+  }
+}));
+router.put('/promo-codes', asyncHandler(async (req, res) => {
+  const checked = promoCodes.validate(req.body);
+  if (!checked.ok) return res.status(400).json({ error: checked.message });
+  try {
+    await promoCodes.saveCodes(checked.value);
+    res.json(await promoCodes.getAdminList());
+  } catch (error) {
+    console.error('Could not save the promo codes:', error.message);
+    res.status(500).json({ error: 'Could not save the promo codes.' });
+  }
+}));
+
+// ---- Opening hours (Admin -> Opening hours) ----
+router.get('/opening-hours', asyncHandler(async (req, res) => {
+  try {
+    res.json({ settings: await openingHours.getSettings(), status: await openingHours.getStatus() });
+  } catch (error) {
+    console.error('Could not load the opening hours:', error.message);
+    res.status(500).json({ error: 'Could not load the opening hours.' });
+  }
+}));
+router.put('/opening-hours', asyncHandler(async (req, res) => {
+  const checked = openingHours.validate(req.body);
+  if (!checked.ok) return res.status(400).json({ error: checked.message });
+  try {
+    await openingHours.saveSettings(checked.value);
+    res.json({ settings: await openingHours.getSettings(), status: await openingHours.getStatus() });
+  } catch (error) {
+    console.error('Could not save the opening hours:', error.message);
+    res.status(500).json({ error: 'Could not save the opening hours.' });
   }
 }));
 
@@ -826,7 +910,10 @@ router.get('/orders', async (req, res) => {
 
   // delivery_lat / delivery_lng hold the pin the customer confirmed at checkout; a database that has not had
   // db/01_tables.sql re-run yet simply lists orders without them.
-  let { data: orders, error } = await buildQuery(`${columns}, delivery_lat, delivery_lng`);
+  let { data: orders, error } = await buildQuery(`${columns}, delivery_lat, delivery_lng, whatsapp_optin, promo_code, discount`);
+  if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+    ({ data: orders, error } = await buildQuery(`${columns}, delivery_lat, delivery_lng`));
+  }
   if (error && (error.code === '42703' || error.code === 'PGRST204')) {
     ({ data: orders, error } = await buildQuery(columns));
   }
