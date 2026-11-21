@@ -1,6 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const supabase = require('../db/supabase');
+const { createAuthClient } = require('../db/supabase-auth-client');
 const { parseOrderRef, sanitizeSearch } = require('../db/order-ref');
 const { requireAdmin } = require('../middleware/auth');
 const { translateTexts, TranslateError } = require('../db/translate');
@@ -12,6 +14,13 @@ const openingHours = require('../db/opening-hours');
 const customers = require('../db/customers');
 
 const router = express.Router();
+const orderDeleteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many deletion attempts. Please wait a while and try again.' },
+});
 
 // Only four statuses are used: confirmed (= "Confirmed & preparing"), out_for_delivery, completed, cancelled.
 const VALID_STATUSES = ['confirmed', 'out_for_delivery', 'completed', 'cancelled'];
@@ -957,9 +966,22 @@ router.patch('/orders/:id/status', async (req, res) => {
   res.json({ order });
 });
 
-// DELETE /api/admin/orders/:ref - delete one CANCELLED order for good (its items go with it).
-// Any other status is refused, so a live order can never be deleted by mistake.
-router.delete('/orders/:id', asyncHandler(async (req, res) => {
+async function verifyAdminPassword(req, password) {
+  if (typeof password !== 'string' || !password) return false;
+  const authClient = createAuthClient();
+  const { data, error } = await authClient.auth.signInWithPassword({
+    email: req.authUser.email,
+    password,
+  });
+  return !error && data.user?.id === req.authUser.id;
+}
+
+// DELETE /api/admin/orders/:ref - delete one cancelled order after fresh password verification.
+router.delete('/orders/:id', orderDeleteLimiter, asyncHandler(async (req, res) => {
+  if (!await verifyAdminPassword(req, req.body?.password)) {
+    return res.status(400).json({ error: 'The admin password is incorrect.' });
+  }
+
   const ref = parseOrderRef(req.params.id);
   if (!ref) return res.status(404).json({ error: 'Order not found' });
 
@@ -977,6 +999,39 @@ router.delete('/orders/:id', asyncHandler(async (req, res) => {
   const { error: deleteError } = await supabase.from('orders').delete().eq('id', order.id);
   if (deleteError) return res.status(500).json({ error: deleteError.message });
   res.json({ ok: true });
+}));
+
+// DELETE /api/admin/orders - delete selected cancelled orders after fresh password verification.
+router.delete('/orders', orderDeleteLimiter, asyncHandler(async (req, res) => {
+  const { ids, password } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length || ids.length > 500
+    || ids.some(id => !(
+      (typeof id === 'number' && Number.isSafeInteger(id) && id > 0)
+      || (typeof id === 'string' && /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id)))
+    ))) {
+    return res.status(400).json({ error: 'Select between 1 and 500 valid orders.' });
+  }
+  const orderIds = [...new Set(ids.map(Number))];
+  if (orderIds.length !== ids.length) {
+    return res.status(400).json({ error: 'The selected orders are not valid.' });
+  }
+  if (!await verifyAdminPassword(req, password)) {
+    return res.status(400).json({ error: 'The admin password is incorrect.' });
+  }
+
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('id, status')
+    .in('id', orderIds);
+  if (error) return res.status(500).json({ error: error.message });
+  if (orders.length !== orderIds.length) return res.status(404).json({ error: 'One or more orders were not found.' });
+  if (orders.some(order => order.status !== 'cancelled')) {
+    return res.status(409).json({ error: 'Only cancelled orders can be deleted. Change their status to Cancelled first.' });
+  }
+
+  const { error: deleteError } = await supabase.from('orders').delete().in('id', orderIds);
+  if (deleteError) return res.status(500).json({ error: deleteError.message });
+  res.json({ ok: true, deleted: orderIds.length });
 }));
 
 router.use((error, req, res, next) => {

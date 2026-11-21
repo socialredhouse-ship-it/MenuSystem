@@ -101,6 +101,16 @@
   .panel-title .count{font-size:12px; color:var(--muted);}
   .manager-form{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:20px;}
   .manager-form h3{margin:0 0 12px; font-size:15px;}
+  .danger-zone{border:1px solid rgba(184,53,43,.55);}
+  .danger-zone-help{color:var(--muted); font-size:13px; line-height:1.5;}
+  .danger-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0;}
+  .danger-dialog{width:min(440px,calc(100% - 32px)); border:1px solid var(--line); border-radius:12px; padding:20px; background:var(--surface); color:var(--text);}
+  .danger-dialog::backdrop{background:rgba(0,0,0,.7);}
+  .danger-dialog h2{margin:0 0 10px; font-size:17px;}
+  .danger-dialog p{color:var(--muted); font-size:13px; line-height:1.5;}
+  .danger-dialog input{width:100%; margin-top:6px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px;}
+  .danger-dialog .form-actions{justify-content:flex-end;}
+  .danger-error{color:var(--red)!important; min-height:18px;}
   .media-preview{display:block; width:100%; max-width:480px; aspect-ratio:16/9; object-fit:cover; border-radius:6px; background:#000; margin-bottom:12px;}
   .media-preview[hidden]{display:none;}
   .special-food-fields{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px;}
@@ -371,6 +381,7 @@
       <button class="admin-tab" data-panel="posterPanel" type="button" data-ui="posterTab">Menu poster</button>
       <button class="admin-tab" data-panel="musicPanel" type="button" data-ui="musicTab">Music</button>
       <button class="admin-tab" data-panel="contactPanel" type="button" data-ui="cdTab">Contact</button>
+      <button class="admin-tab" data-panel="dangerZonePanel" type="button" data-ui="dangerZone">Danger zone</button>
     </nav>
     <section class="admin-panel" id="ordersPanel">
     <div class="filters" id="statusFilters"></div>
@@ -876,9 +887,46 @@
       <p class="field-hint" id="menuReorderNote" role="status"></p>
       <div class="records" id="menuRecords"></div>
     </section>
+
+    <section class="admin-panel" id="dangerZonePanel" hidden>
+      <div class="panel-title"><h2 data-ui="dangerZone">Danger zone</h2></div>
+      <div class="manager-form danger-zone">
+        <h3 data-ui="dangerZoneTitle">Delete orders</h3>
+        <p class="danger-zone-help" data-ui="dangerZoneHelp">Permanently delete cancelled orders. This cannot be undone. Only cancelled orders can be deleted.</p>
+        <div class="danger-actions">
+          <label><input id="dangerSelectAll" type="checkbox"> <span data-ui="selectAllOrders">Select all</span></label>
+          <button class="action-btn danger" id="dangerDeleteSelected" type="button" disabled data-ui="deleteSelectedOrders">Delete selected</button>
+          <span class="form-note" id="dangerOrderCount" role="status"></span>
+        </div>
+        <p class="form-note" id="dangerOrdersNote" role="status"></p>
+        <div class="table-scroll">
+          <table class="cust-table">
+            <thead><tr>
+              <th><span class="visually-hidden" data-ui="selectOrder">Select order</span></th>
+              <th data-ui="orderNumber">Order</th><th data-ui="customer">Customer</th><th data-ui="orderDate">Date</th><th data-ui="total">Total</th><th></th>
+            </tr></thead>
+            <tbody id="dangerOrdersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 
 </div>
+
+<dialog id="deleteOrderDialog" class="danger-dialog">
+  <form id="deleteOrderForm">
+    <h2 data-ui="deleteOrderPasswordTitle">Confirm order deletion</h2>
+    <p id="deleteOrderPrompt"></p>
+    <label class="field-label" for="deleteOrderPassword" data-ui="adminPasswordAgain">Enter your admin password to confirm.</label>
+    <input id="deleteOrderPassword" type="password" autocomplete="current-password" required>
+    <p class="danger-error" id="deleteOrderError" role="status"></p>
+    <div class="form-actions">
+      <button class="action-btn" id="cancelDeleteOrder" type="button" data-ui="cancelDelete">Cancel</button>
+      <button class="action-btn danger" id="confirmDeleteOrder" type="submit" data-ui="confirmDelete">Delete permanently</button>
+    </div>
+  </form>
+</dialog>
 
 <script>
 const API_BASE = window.location.origin;
@@ -1510,6 +1558,50 @@ const ZONE_EDITOR_STRINGS = {
     zoneOkSaved:'配送范围已启用，使用下方保存的边界。顾客在结账时放置图钉，范围之外无法支付送货订单。',
     zoneApprox:'这仍是估算的初始形状：请在下方地图上核对，然后点击“保存配送范围”。' },
 };
+Object.assign(ADMIN_UI_STRINGS.en, {
+  dangerZone:'Danger zone', dangerZoneTitle:'Delete orders',
+  dangerZoneHelp:'Permanently delete cancelled orders. This cannot be undone. Only cancelled orders can be deleted.',
+  selectAllOrders:'Select all', deleteSelectedOrders:'Delete selected', selectOrder:'Select order',
+  orderNumber:'Order', customer:'Customer', orderDate:'Date', deleteOrderPasswordTitle:'Confirm order deletion',
+  deleteOrderPasswordPrompt:'Permanently delete {count} selected cancelled order(s)? This cannot be undone.',
+  adminPasswordAgain:'Enter your admin password to confirm.', cancelDelete:'Cancel', confirmDelete:'Delete permanently',
+  dangerOrdersEmpty:'No cancelled orders to delete.', dangerOrdersLoadFailed:'Could not load cancelled orders.',
+  dangerOrdersCount:'{count} cancelled orders', dangerOrdersCountOne:'1 cancelled order', loadingDangerOrders:'Loading cancelled orders…',
+  invalidAdminPassword:'The admin password is incorrect.', selectMaxOrders:'Delete up to 500 orders at a time.',
+});
+Object.assign(ADMIN_UI_STRINGS.ar, {
+  dangerZone:'منطقة الخطر', dangerZoneTitle:'حذف الطلبات',
+  dangerZoneHelp:'احذف الطلبات الملغاة نهائياً. لا يمكن التراجع عن ذلك، ولا يمكن حذف سوى الطلبات الملغاة.',
+  selectAllOrders:'تحديد الكل', deleteSelectedOrders:'حذف المحدد', selectOrder:'تحديد الطلب',
+  orderNumber:'الطلب', customer:'العميل', orderDate:'التاريخ', deleteOrderPasswordTitle:'تأكيد حذف الطلب',
+  deleteOrderPasswordPrompt:'هل تريد حذف {count} من الطلبات الملغاة نهائياً؟ لا يمكن التراجع عن ذلك.',
+  adminPasswordAgain:'أدخل كلمة مرور المدير للتأكيد.', cancelDelete:'إلغاء', confirmDelete:'حذف نهائياً',
+  dangerOrdersEmpty:'لا توجد طلبات ملغاة للحذف.', dangerOrdersLoadFailed:'تعذر تحميل الطلبات الملغاة.',
+  dangerOrdersCount:'{count} طلبات ملغاة', dangerOrdersCountOne:'طلب ملغى واحد', loadingDangerOrders:'جارٍ تحميل الطلبات الملغاة…',
+  invalidAdminPassword:'كلمة مرور المدير غير صحيحة.', selectMaxOrders:'يمكن حذف 500 طلب كحد أقصى في المرة الواحدة.',
+});
+Object.assign(ADMIN_UI_STRINGS.ur, {
+  dangerZone:'خطرے کا حصہ', dangerZoneTitle:'آرڈرز حذف کریں',
+  dangerZoneHelp:'منسوخ آرڈرز مستقل طور پر حذف کریں۔ یہ واپس نہیں ہو سکتا۔ صرف منسوخ آرڈرز حذف کیے جا سکتے ہیں۔',
+  selectAllOrders:'سب منتخب کریں', deleteSelectedOrders:'منتخب شدہ حذف کریں', selectOrder:'آرڈر منتخب کریں',
+  orderNumber:'آرڈر', customer:'کسٹمر', orderDate:'تاریخ', deleteOrderPasswordTitle:'آرڈر حذف کرنے کی تصدیق',
+  deleteOrderPasswordPrompt:'کیا {count} منسوخ آرڈرز مستقل طور پر حذف کریں؟ یہ واپس نہیں ہو سکتا۔',
+  adminPasswordAgain:'تصدیق کے لیے ایڈمن پاس ورڈ درج کریں۔', cancelDelete:'منسوخ کریں', confirmDelete:'مستقل حذف کریں',
+  dangerOrdersEmpty:'حذف کرنے کے لیے کوئی منسوخ آرڈر نہیں۔', dangerOrdersLoadFailed:'منسوخ آرڈرز لوڈ نہیں ہو سکے۔',
+  dangerOrdersCount:'منسوخ آرڈرز: {count}', dangerOrdersCountOne:'ایک منسوخ آرڈر', loadingDangerOrders:'منسوخ آرڈرز لوڈ ہو رہے ہیں…',
+  invalidAdminPassword:'ایڈمن پاس ورڈ غلط ہے۔', selectMaxOrders:'ایک وقت میں زیادہ سے زیادہ 500 آرڈرز حذف کریں۔',
+});
+Object.assign(ADMIN_UI_STRINGS.zh, {
+  dangerZone:'危险区域', dangerZoneTitle:'删除订单',
+  dangerZoneHelp:'永久删除已取消的订单。此操作无法撤销，并且只能删除已取消的订单。',
+  selectAllOrders:'全选', deleteSelectedOrders:'删除所选订单', selectOrder:'选择订单',
+  orderNumber:'订单', customer:'客户', orderDate:'日期', deleteOrderPasswordTitle:'确认删除订单',
+  deleteOrderPasswordPrompt:'确定永久删除 {count} 个已取消的订单吗？此操作无法撤销。',
+  adminPasswordAgain:'请输入管理员密码以确认。', cancelDelete:'取消', confirmDelete:'永久删除',
+  dangerOrdersEmpty:'没有可删除的已取消订单。', dangerOrdersLoadFailed:'无法加载已取消的订单。',
+  dangerOrdersCount:'{count} 个已取消订单', dangerOrdersCountOne:'1 个已取消订单', loadingDangerOrders:'正在加载已取消的订单…',
+  invalidAdminPassword:'管理员密码不正确。', selectMaxOrders:'每次最多删除 500 个订单。',
+});
 Object.keys(ZONE_EDITOR_STRINGS).forEach(code => Object.assign(ADMIN_UI_STRINGS[code], ZONE_EDITOR_STRINGS[code]));
 
 let token = localStorage.getItem(TOKEN_KEY) || '';
@@ -1519,6 +1611,7 @@ if(adminUiLanguage === 'ur') adminUiLanguage = 'en'; // Urdu hidden for now
 let currentFilter = 'all';
 let autoRefreshTimer = null;
 let currentOrders = [];
+let dangerOrders = [];
 let ordersLoaded = false;
 let loginStatusKey = '';
 const ADMIN_DATE_LOCALES = { en:'en-US', ar:'ar-SA', ur:'ur-PK', zh:'zh-CN' };
@@ -1567,6 +1660,7 @@ function applyAdminUiLanguage(language){
   zoneRefreshText();
   renderFilters();
   if(ordersLoaded) renderOrders(currentOrders);
+  if(!document.getElementById('dangerZonePanel').hidden) renderDangerOrders(dangerOrders);
   if(!document.getElementById('categoriesPanel').hidden) renderCategories();
   if(!document.getElementById('menuPanel').hidden){
     renderCategoryOptions(document.getElementById('itemCategory').value);
@@ -1784,14 +1878,126 @@ function renderOrders(orders){
 document.getElementById('ordersList').addEventListener('click', async event => {
   const button = event.target.closest('[data-delete-order]');
   if(!button) return;
-  if(!window.confirm(adminText('deleteOrderConfirm'))) return;
-  button.disabled = true;
+  openOrderDeleteDialog([button.dataset.deleteOrder]);
+});
+
+async function loadDangerOrders(){
+  const note = document.getElementById('dangerOrdersNote');
+  note.textContent = adminText('loadingDangerOrders');
   try{
-    await adminRequest(`/orders/${encodeURIComponent(button.dataset.deleteOrder)}`, { method: 'DELETE' });
-    await loadOrders();
+    const result = await adminRequest('/orders?status=cancelled');
+    renderDangerOrders(result.orders || []);
+    note.textContent = '';
   }catch(error){
-    window.alert(error.message || adminText('couldNotDeleteOrder'));
-    button.disabled = false;
+    note.textContent = adminText('dangerOrdersLoadFailed');
+  }
+}
+
+function renderDangerOrders(orders){
+  dangerOrders = orders;
+  const body = document.getElementById('dangerOrdersBody');
+  const selectAll = document.getElementById('dangerSelectAll');
+  const deleteSelected = document.getElementById('dangerDeleteSelected');
+  const count = document.getElementById('dangerOrderCount');
+  count.textContent = orders.length === 1
+    ? adminText('dangerOrdersCountOne')
+    : adminText('dangerOrdersCount', { count: orders.length });
+  selectAll.checked = false;
+  selectAll.indeterminate = false;
+  deleteSelected.disabled = true;
+  if(!orders.length){
+    body.innerHTML = `<tr><td colspan="6">${adminText('dangerOrdersEmpty')}</td></tr>`;
+    return;
+  }
+  body.innerHTML = orders.map(order => `
+    <tr>
+      <td><input type="checkbox" data-danger-select="${escapeHtml(order.id)}" aria-label="${escapeHtml(adminText('selectOrder'))} ${escapeHtml(order.order_number || order.id)}"></td>
+      <td>${escapeHtml(order.order_number || `#${order.id}`)}</td>
+      <td>${escapeHtml(order.customer_name)}</td>
+      <td>${escapeHtml(new Date(order.created_at).toLocaleString(ADMIN_DATE_LOCALES[adminUiLanguage]))}</td>
+      <td>${money(order.total)}</td>
+      <td><button class="action-btn danger" type="button" data-danger-delete="${escapeHtml(order.id)}">${adminText('deleteOrder')}</button></td>
+    </tr>`).join('');
+}
+
+function updateDangerSelection(){
+  const boxes = [...document.querySelectorAll('[data-danger-select]')];
+  const selected = boxes.filter(box => box.checked).length;
+  const selectAll = document.getElementById('dangerSelectAll');
+  selectAll.checked = boxes.length > 0 && selected === boxes.length;
+  selectAll.indeterminate = selected > 0 && selected < boxes.length;
+  document.getElementById('dangerDeleteSelected').disabled = selected === 0;
+}
+
+document.getElementById('dangerSelectAll').addEventListener('change', event => {
+  document.querySelectorAll('[data-danger-select]').forEach(box => { box.checked = event.currentTarget.checked; });
+  updateDangerSelection();
+});
+document.getElementById('dangerOrdersBody').addEventListener('change', event => {
+  if(event.target.matches('[data-danger-select]')) updateDangerSelection();
+});
+document.getElementById('dangerOrdersBody').addEventListener('click', event => {
+  const button = event.target.closest('[data-danger-delete]');
+  if(button) openOrderDeleteDialog([button.dataset.dangerDelete]);
+});
+document.getElementById('dangerDeleteSelected').addEventListener('click', () => {
+  const ids = [...document.querySelectorAll('[data-danger-select]:checked')].map(box => box.dataset.dangerSelect);
+  if(ids.length) openOrderDeleteDialog(ids);
+});
+
+let pendingOrderDeleteIds = [];
+function openOrderDeleteDialog(ids){
+  if(ids.length > 500){
+    document.getElementById('dangerOrdersNote').textContent = adminText('selectMaxOrders');
+    return;
+  }
+  if(document.getElementById('deleteOrderDialog').open) return;
+  pendingOrderDeleteIds = ids;
+  document.getElementById('deleteOrderPrompt').textContent = adminText('deleteOrderPasswordPrompt', { count: ids.length });
+  document.getElementById('deleteOrderPassword').value = '';
+  document.getElementById('deleteOrderError').textContent = '';
+  document.getElementById('deleteOrderDialog').showModal();
+  document.getElementById('deleteOrderPassword').focus();
+}
+
+document.getElementById('cancelDeleteOrder').addEventListener('click', () => {
+  document.getElementById('deleteOrderDialog').close();
+  pendingOrderDeleteIds = [];
+});
+document.getElementById('deleteOrderDialog').addEventListener('close', () => {
+  pendingOrderDeleteIds = [];
+});
+document.getElementById('deleteOrderForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const passwordInput = document.getElementById('deleteOrderPassword');
+  const submitButton = document.getElementById('confirmDeleteOrder');
+  const errorNote = document.getElementById('deleteOrderError');
+  if(!passwordInput.value || !pendingOrderDeleteIds.length) return;
+
+  submitButton.disabled = true;
+  errorNote.textContent = '';
+  try{
+    const ids = [...pendingOrderDeleteIds];
+    const isBulk = ids.length > 1;
+    await adminRequest(isBulk ? '/orders' : `/orders/${encodeURIComponent(ids[0])}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(isBulk ? { ids, password: passwordInput.value } : { password: passwordInput.value }),
+    });
+    document.getElementById('deleteOrderDialog').close();
+    pendingOrderDeleteIds = [];
+    await Promise.all([loadOrders(), loadDangerOrders()]);
+  }catch(error){
+    if(error.message === adminText('sessionExpired')){
+      document.getElementById('deleteOrderDialog').close();
+      pendingOrderDeleteIds = [];
+      return;
+    }
+    errorNote.textContent = error.message === 'The admin password is incorrect.'
+      ? adminText('invalidAdminPassword')
+      : error.message || adminText('couldNotDeleteOrder');
+  }finally{
+    submitButton.disabled = false;
   }
 });
 
@@ -1816,6 +2022,7 @@ async function updateStatus(select){
     badge.className = `badge ${newStatus}`;
     badge.textContent = adminText(newStatus);
     select.closest('.status-row').querySelector('[data-delete-order]').hidden = newStatus !== 'cancelled';   // Delete order only on cancelled orders
+    if(!document.getElementById('dangerZonePanel').hidden) loadDangerOrders();
     setTimeout(() => { note.textContent = ''; }, 2000);
   }catch(err){
     note.textContent = adminText('failedSave');
@@ -1853,6 +2060,7 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
     if(tab.dataset.panel === 'customersPanel') loadCustomers();
     if(tab.dataset.panel === 'promoPanel') loadPromoCodes();
     if(tab.dataset.panel === 'hoursPanel') loadOpeningHours();
+    if(tab.dataset.panel === 'dangerZonePanel') loadDangerOrders();
   });
 });
 
