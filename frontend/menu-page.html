@@ -456,6 +456,8 @@
     width:100%; background:var(--surface); border:var(--ol-fields-w,1px) solid var(--ol-fields-c,var(--line)); border-radius:10px;   /* Admin > Outlines: text fields */
     padding:12px 12px; color:var(--text); font-family:inherit; font-size:calc(14px + var(--lang-add,0px));
   }
+  html[lang="ar"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  html[lang="ar"] textarea, html[lang="ar"] select{font-family:Arial,sans-serif; font-weight:700;}
   .field-textarea{resize:vertical; min-height:64px;}
   .pay-method{
     display:flex; align-items:center; justify-content:center; gap:8px; border:var(--ol-paybox-w,1px) solid var(--ol-paybox-c,var(--gold));   /* Admin > Outlines: payment method box */
@@ -908,15 +910,15 @@
           <p class="promo-msg" id="promoMsg" role="status" aria-live="polite"></p>
         </div>
         <p class="field-label" id="nameLabel"></p>
-        <input class="field-input" id="checkoutName" type="text">
+        <input class="field-input" id="checkoutName" type="text" autocomplete="name">
         <p class="field-label" id="phoneLabel"></p>
-        <input class="field-input" id="checkoutPhone" type="tel" placeholder="+__ _________">
+        <input class="field-input" id="checkoutPhone" type="tel" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" autocomplete="tel" dir="ltr" placeholder="05XXXXXXXX">
         <p class="field-label" id="paymentLabel"></p>
         <div class="pay-method">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           <span id="paymentMethodText"></span>
         </div>
-        <label class="optin"><input type="checkbox" id="coOptin"><span id="coOptinText"></span></label>
+        <label class="optin"><input type="checkbox" id="coOptin" checked><span id="coOptinText"></span></label>
         <button class="primary-btn" id="coNextBtn" type="button"></button>
         <p class="status-note" id="coNextNote"></p>
       </div>
@@ -1131,6 +1133,10 @@ const STR = {
        includesTitle:'此套餐自动包含：', includesText:'紫菜汤、蛋炒饭、面条、沙拉和水',
        descTemplate:'{name}，主厨精心制作，配米饭、沙拉、汤和瓶装水。' },
 };
+Object.assign(STR.en, { bistroLabel:'Our Location', nameInvalid:'Name cannot contain numbers.', phoneInvalid:'Enter a 10-digit mobile number.' });
+Object.assign(STR.ar, { bistroLabel:'موقعنا', nameInvalid:'يجب ألا يحتوي الاسم على أرقام.', phoneInvalid:'أدخل رقم جوال مكوّناً من 10 أرقام.' });
+Object.assign(STR.ur, { bistroLabel:'ہماری جگہ', nameInvalid:'نام میں اعداد شامل نہیں ہو سکتے۔', phoneInvalid:'10 ہندسوں کا موبائل نمبر درج کریں۔' });
+Object.assign(STR.zh, { bistroLabel:'我们的位置', nameInvalid:'姓名不能包含数字。', phoneInvalid:'请输入10位手机号码。' });
 
 // Strings for the call-button contact card.
 const CONTACT_STR = {
@@ -1784,9 +1790,13 @@ const PENDING_PAYMENT_KEY = 'redhouse_pending_payment';
 
 async function loadConfig(){
   try{
-    const res = await fetch(`${API_BASE}/api/config`);
-    if(!res.ok) throw new Error(`GET /api/config failed (${res.status})`);
-    const cfg = await res.json();
+    let cfg = window.__SITE__ && window.__SITE__.config;   // inlined by the server: no API call on load
+    if(cfg){ window.__SITE__.config = null; }
+    else{
+      const res = await fetch(`${API_BASE}/api/config`);
+      if(!res.ok) throw new Error(`GET /api/config failed (${res.status})`);
+      cfg = await res.json();
+    }
     DELIVERY_FEE = Number(cfg.deliveryFee ?? DELIVERY_FEE);
     DELIVERY_FEE_ENABLED = cfg.deliveryFeeEnabled !== false;
     CURRENCY = cfg.currency || CURRENCY;
@@ -1821,9 +1831,13 @@ let CONTACT = { phone:'', phone2:'', address:'', mapUrl:'', lat:null, lng:null }
 
 async function loadContact(){
   try{
-    const res = await fetch(`${API_BASE}/api/contact`, { cache:'no-store' });
-    if(!res.ok) throw new Error(`GET /api/contact failed (${res.status})`);
-    const data = await res.json();
+    let data = window.__SITE__ && window.__SITE__.contact;  // first call uses the inlined copy; later calls fetch live
+    if(data){ window.__SITE__.contact = null; }
+    else{
+      const res = await fetch(`${API_BASE}/api/contact`, { cache:'no-store' });
+      if(!res.ok) throw new Error(`GET /api/contact failed (${res.status})`);
+      data = await res.json();
+    }
     const pinLat = Number(data.lat), pinLng = Number(data.lng);
     CONTACT = { phone:String(data.phone||''), phone2:String(data.phone2||''), address:String(data.address||''), mapUrl:String(data.mapUrl||''),
       lat:data.lat != null && Number.isFinite(pinLat) ? pinLat : null, lng:data.lng != null && Number.isFinite(pinLng) ? pinLng : null };
@@ -3030,13 +3044,24 @@ function setCheckoutStep(step){
     setTimeout(()=>{ if(locMap) locMap.invalidateSize(); if(pickupMap) pickupMap.invalidateSize(); }, 120);
   }
 }
+function checkoutContactErrors(){
+  const errors = {};
+  const name = document.getElementById('checkoutName').value.trim();
+  const phone = document.getElementById('checkoutPhone').value.trim();
+  if(!name) errors.checkoutName = STR[lang].fieldRequired;
+  else if(/\p{N}/u.test(name)) errors.checkoutName = STR[lang].nameInvalid;
+  if(!phone) errors.checkoutPhone = STR[lang].fieldRequired;
+  else if(!/^[0-9]{10}$/.test(phone)) errors.checkoutPhone = STR[lang].phoneInvalid;
+  return errors;
+}
 document.getElementById('coNextBtn').addEventListener('click', ()=>{
-  const missing = ['checkoutName','checkoutPhone'].filter(id => !document.getElementById(id).value.trim());
   clearCheckoutFieldErrors();
-  if(missing.length){
-    missing.forEach(markCheckoutFieldInvalid);
+  const fieldErrors = checkoutContactErrors();
+  const invalidFields = Object.keys(fieldErrors);
+  if(invalidFields.length){
+    invalidFields.forEach(id=>markCheckoutFieldInvalid(id, fieldErrors[id]));
     document.getElementById('coNextNote').textContent = STR[lang].detailsRequired;
-    const first = document.getElementById(missing[0]);
+    const first = document.getElementById(invalidFields[0]);
     first.scrollIntoView({ block:'center', behavior:'smooth' });
     first.focus({ preventScroll:true });
     return;
@@ -3084,6 +3109,7 @@ function refreshCheckoutOrderType(){
 }
 function openCheckout(){
   invalidateMoyasarInit();
+  document.getElementById('coOptin').checked = true;
   document.getElementById('checkoutDetails').hidden = false;
   document.getElementById('moyasarCheckout').hidden = true;
   document.getElementById('moyasarForm').replaceChildren();
@@ -3278,7 +3304,7 @@ function clearCheckoutFieldError(id){
 function clearCheckoutFieldErrors(){
   REQUIRED_CHECKOUT_FIELDS.forEach(clearCheckoutFieldError);
 }
-function markCheckoutFieldInvalid(id){
+function markCheckoutFieldInvalid(id, message = STR[lang].fieldRequired){
   const field = document.getElementById(id);
   field.classList.add('field-invalid');
   field.setAttribute('aria-invalid', 'true');
@@ -3286,7 +3312,7 @@ function markCheckoutFieldInvalid(id){
   error.className = 'field-error';
   error.id = `${id}Error`;
   error.setAttribute('role', 'alert');
-  error.textContent = STR[lang].fieldRequired;
+  error.textContent = message;
   field.insertAdjacentElement('afterend', error);
 }
 REQUIRED_CHECKOUT_FIELDS.forEach(id=>{
@@ -3301,18 +3327,17 @@ document.getElementById('checkoutPayBtn').addEventListener('click', async ()=>{
   const payBtn = document.getElementById('checkoutPayBtn');
 
   clearCheckoutFieldErrors();
-  const missingFields = [];
-  if(!name) missingFields.push('checkoutName');
-  if(!phone) missingFields.push('checkoutPhone');
-  if(orderType==='delivery' && !address) missingFields.push('checkoutAddress');
-  if(missingFields.length){
-    missingFields.forEach(markCheckoutFieldInvalid);
+  const fieldErrors = checkoutContactErrors();
+  if(orderType==='delivery' && !address) fieldErrors.checkoutAddress = STR[lang].fieldRequired;
+  const invalidFields = Object.keys(fieldErrors);
+  if(invalidFields.length){
+    invalidFields.forEach(id=>markCheckoutFieldInvalid(id, fieldErrors[id]));
     statusNote.textContent = STR[lang].detailsRequired;
-    if(missingFields.some(id => id !== 'checkoutAddress')){   // name / mobile live on step 1
+    if(invalidFields.some(id => id !== 'checkoutAddress')){   // name / mobile live on step 1
       setCheckoutStep(1);
       document.getElementById('coNextNote').textContent = STR[lang].detailsRequired;
     }
-    const firstMissing = document.getElementById(missingFields[0]);
+    const firstMissing = document.getElementById(invalidFields[0]);
     firstMissing.scrollIntoView({ block:'center', behavior:'smooth' });
     firstMissing.focus({ preventScroll:true });
     return;
@@ -3346,7 +3371,7 @@ document.getElementById('checkoutPayBtn').addEventListener('click', async ()=>{
     delivery_address: orderType==='delivery' ? address : null,
     delivery_lat: orderType==='delivery' && deliveryPin ? deliveryPin.lat : null,
     delivery_lng: orderType==='delivery' && deliveryPin ? deliveryPin.lng : null,
-    whatsapp_optin: document.getElementById('coOptin').checked,   // the customer's own tick, unticked by default
+    whatsapp_optin: document.getElementById('coOptin').checked,
     promo_code: promo ? promo.code : null,
     items: cartLines().map(l=>({ menu_item_id: l.item.id, quantity: l.qty }))
   };

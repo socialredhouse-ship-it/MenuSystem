@@ -178,6 +178,7 @@ router.put('/admin/contact', requireAdmin, async (req, res) => {
 });
 
 router.getOrderWhatsapp = getOrderWhatsapp;
+router.getPublicContact = async () => ({ ...(await readContact()), orderWa: await getOrderWhatsapp() });
 router.getRestaurantLocation = getRestaurantLocation;
 router.toWaNumber = toWaNumber;
 router.stripLanguageParams = stripLanguageParams;

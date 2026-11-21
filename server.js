@@ -26,6 +26,7 @@ const { getDeliverySettings, CURRENCY } = require('./db/delivery-settings');
 const deliveryZone = require('./db/delivery-zone');
 const cartBoxes = require('./db/choice-boxes');
 const { getMoyasarConfig } = require('./db/moyasar-config');
+const siteSnapshot = require('./db/site-snapshot');
 
 const app = express();
 
@@ -76,19 +77,37 @@ app.use(express.json());
 const MENU_PAGE_FILE = path.join(__dirname, 'frontend', 'menu-page.html');
 let menuPageHtml = null;
 
+function siteScript(snap, openStatus) {
+  // public, non-secret values the page used to fetch with 2-3 API calls on load
+  const data = JSON.stringify({ config: { ...snap.config, openStatus }, contact: snap.contact })
+    .replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  return `<script>window.__SITE__=${data};</script>`;
+}
+
 async function sendMenuPage(req, res) {
   res.set('Cache-Control', 'no-cache');
   try {
     if (menuPageHtml === null) menuPageHtml = await fs.promises.readFile(MENU_PAGE_FILE, 'utf8');
+    const requestedLanguage = String(req.query.lang || '').toLowerCase();
+    const language = ['en', 'ar', 'ur', 'zh'].includes(requestedLanguage) ? requestedLanguage : 'en';
+
+    const snap = await siteSnapshot.ensure();
+    if (snap) {
+      // rendered once per language until the next admin save; only the open/closed state is live
+      const page = siteSnapshot.htmlFor(language, () => renderMenuPage(menuPageHtml, {
+        ...snap.menuData, design: snap.design, language, posterUrl: snap.posterUrl,
+      }).replace('</head>', '<!--__SITE__--></head>'));
+      const openStatus = await openingHours.getStatus().catch(() => ({ open: true, mode: 'open', nextOpen: null, message: {} }));
+      return res.type('html').send(page.replace('<!--__SITE__-->', () => siteScript(snap, openStatus)));
+    }
+
+    // no snapshot yet (first build failed): the original live path
     const [posterUrl, menuData, design] = await Promise.all([
       posterRoutes.getPosterUrl(),
       menuRoutes.getInitialData(),
       designRoutes.getPublicDesign(),
     ]);
-    const requestedLanguage = String(req.query.lang || '').toLowerCase();
-    const language = ['en', 'ar', 'ur', 'zh'].includes(requestedLanguage) ? requestedLanguage : 'en';
-    const html = renderMenuPage(menuPageHtml, { ...menuData, design, language, posterUrl });
-    res.type('html').send(html);
+    res.type('html').send(renderMenuPage(menuPageHtml, { ...menuData, design, language, posterUrl }));
   } catch (error) {
     console.error('Could not serve the menu page:', error.message);
     res.sendFile(MENU_PAGE_FILE);
@@ -142,8 +161,8 @@ app.get('/api/open-status', async (req, res) => {
 // Public, non-secret runtime config the frontend needs. Keeps
 // BRANCH_NAME/DELIVERY_FEE defined once, server-side,
 // instead of hardcoded in homepage.html.
-app.get('/api/config', async (req, res) => {
-  res.set('Cache-Control', 'no-cache');
+// Everything in GET /api/config except the live open/closed state. Throws if delivery settings cannot be read.
+async function buildPublicConfig() {
   let whatsappNumber = '';
   try { whatsappNumber = await contactRoutes.getOrderWhatsapp(); } catch (e) { console.error('Could not resolve the order WhatsApp number:', e.message); }
   let deliverySettings;
@@ -151,10 +170,10 @@ app.get('/api/config', async (req, res) => {
     deliverySettings = await getDeliverySettings();
   } catch (error) {
     console.error('Could not resolve delivery settings:', error.message);
-    return res.status(500).json({ error: 'Could not load site configuration.' });
+    throw error;
   }
   const paymentConfig = getMoyasarConfig();
-  res.json({
+  return {
     // set in Admin -> Contact (falls back to WhatsApp number 1)
     whatsappNumber,
     branchName: process.env.BRANCH_NAME || 'Red House Trading',
@@ -173,14 +192,39 @@ app.get('/api/config', async (req, res) => {
     googleMapApiKey: (process.env.GOOGLE_MAP_API || '').trim(),
     // where home delivery is allowed; the checkout draws it and gives instant feedback, POST /api/orders enforces it
     // texts + outline colour of the two big cart boxes (Admin -> Cart boxes); built-in texts where nothing is saved
-    // Admin -> Opening hours: { open, mode, nextOpen: {dayOffset, dow, time}, message: {en, ar, ur, zh} } (open:true when nothing is set up)
-    openStatus: await openingHours.getStatus().catch(() => ({ open: true, mode: 'open', nextOpen: null, message: {} })),
     // true when Admin -> Promo codes has at least one usable code: only then does checkout show the promo box
     promoEnabled: await promoCodes.hasActiveCodes().catch(() => false),
     cartBoxes: await cartBoxes.getCartBoxes().catch(() => cartBoxes.merge(null)),
     deliveryZone: await deliveryZone.publicZone().catch((e) => { console.error('Could not resolve the delivery area:', e.message); return { enforced: false, center: null, geometry: null }; }),
-  });
+  };
+}
+
+app.get('/api/config', async (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  try {
+    const snap = await siteSnapshot.ensure();
+    const config = snap ? snap.config : await buildPublicConfig();
+    const openStatus = await openingHours.getStatus().catch(() => ({ open: true, mode: 'open', nextOpen: null, message: {} }));
+    res.json({ ...config, openStatus });
+  } catch (error) {
+    res.status(500).json({ error: 'Could not load site configuration.' });
+  }
 });
+
+async function loadSnapshot() {
+  const [posterUrl, menuData, design, config, contact] = await Promise.all([
+    posterRoutes.getPosterUrl(),
+    menuRoutes.getInitialData(),
+    designRoutes.getPublicDesign(),
+    buildPublicConfig(),
+    contactRoutes.getPublicContact(),
+  ]);
+  return { posterUrl, menuData, design, config, contact };
+}
+
+// Any successful admin write (or confirmed payment) marks the snapshot stale; it is rebuilt on the next request.
+app.use('/api/admin', siteSnapshot.watcher);
+app.use('/api/orders/payment', siteSnapshot.watcher);
 
 app.use('/api', menuRoutes);
 app.use('/api', orderRoutes);
@@ -198,6 +242,7 @@ app.use('/api/admin', adminRoutes);
 app.listen(PORT, () => {
   console.log(`Red House Catering server running on port ${PORT}`);
   deliveryZone.logStatus();
+  siteSnapshot.init(loadSnapshot, { refreshMinutes: Number(process.env.SNAPSHOT_REFRESH_MINUTES) || 0 });
 
   const paymentConfig = getMoyasarConfig();
   const { publishableMode, secretMode } = paymentConfig;
