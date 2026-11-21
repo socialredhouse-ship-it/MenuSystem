@@ -233,6 +233,8 @@
   /* Saudi Riyal sign (Unicode U+20C1, glyph outline from the MIT-licensed `riyal` package). Drawn as an SVG because most device fonts do not have the character yet. */
   .money{white-space:nowrap; direction:ltr; unicode-bidi:isolate;}
   .money .riyal{width:.82em; height:.92em; margin-right:.2em; vertical-align:-.12em; fill:currentColor;}
+  /* Keep numeric values in the same Latin font as the English menu. Arabic text keeps its selected language font. */
+  html[lang="ar"] .money{font-family:'Poppins',sans-serif;}
   .row .price{
     margin:0; font-family:var(--cs-price-font,var(--cs-font,var(--menu-font-family,'Cormorant Garamond',Georgia,'Times New Roman',serif))); font-weight:var(--bold-price,700);
     font-size:calc((max(16px, calc(4.6 * var(--u) + 2pt)) + var(--lang-add,0px)) * var(--cs-price-size,1) * var(--cs-size,1)); line-height:1; letter-spacing:.02em; color:var(--cs-price-color,var(--menu-font-color,#5b4a2c));
@@ -570,7 +572,7 @@
   footer.tabs .icon{position:relative; overflow:visible;}
   /* cart count badge on the Basket tab icon */
   .cart-badge{
-    position:absolute; top:-7px; inset-inline-end:-10px; min-width:20px; height:20px; padding:0 4px; box-sizing:border-box;
+    position:absolute; bottom:-7px; inset-inline-end:-10px; min-width:20px; height:20px; padding:0 4px; box-sizing:border-box;
     border-radius:999px; background:var(--red); color:#fff; font-size:calc(11px + var(--lang-add,0px)); font-weight:700; line-height:16px;
     text-align:center; border:2px solid var(--surface); pointer-events:none;
     transform:scale(1); transition:transform .15s ease;
