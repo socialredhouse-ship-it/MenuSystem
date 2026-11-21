@@ -2818,9 +2818,8 @@ function labelMapLayers(entry){
     entry.en.on('add', ()=>loadEnglishLayer(entry));
     entry.en.on('remove', ()=>{ entry.en.clearLayers(); entry.enGl = null; });
   }
-  const bases = { [STR[lang].mapLayerMap]:entry.street };
+  const bases = {};
   if(entry.google) bases[STR[lang].mapLayerGoogle] = entry.google;
-  if(english) bases[STR[lang].mapLayerEn] = entry.en;
   bases[STR[lang].mapLayerSat] = entry.sat;
   entry.control = L.control.layers(bases, null, { collapsed:false, position:'topright' }).addTo(entry.map);
 }

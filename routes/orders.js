@@ -1,5 +1,5 @@
 const express = require('express');
-const { randomUUID } = require('crypto');
+const { randomUUID, timingSafeEqual } = require('crypto');
 const rateLimit = require('express-rate-limit');
 const supabase = require('../db/supabase');
 const { getAuthUser } = require('../middleware/auth');
@@ -415,6 +415,18 @@ router.post('/orders/payment/confirm', paymentConfirmLimiter, async (req, res) =
 // Register this URL as a Moyasar webhook. The request is only a notification:
 // the payment is re-fetched from Moyasar before any order state is changed.
 router.post('/orders/payment/webhook', paymentWebhookLimiter, async (req, res) => {
+  const webhookSecret = process.env.MOYASAR_WEBHOOK_SECRET || '';
+  if (!webhookSecret) {
+    return res.status(503).json({ error: 'Webhook verification is not configured.' });
+  }
+  const authorization = req.get('authorization') || '';
+  const tokenMatch = /^Bearer ([^\s]+)$/i.exec(authorization);
+  const providedToken = tokenMatch ? Buffer.from(tokenMatch[1]) : Buffer.alloc(0);
+  const expectedToken = Buffer.from(webhookSecret);
+  if (providedToken.length !== expectedToken.length || !timingSafeEqual(providedToken, expectedToken)) {
+    return res.status(401).json({ error: 'Invalid webhook token.' });
+  }
+
   const paymentId = String(req.body?.payment?.id || req.body?.data?.object?.id || req.body?.data?.id || req.body?.payment_id || req.body?.id || '');
   if (!UUID_PATTERN.test(paymentId)) return res.status(400).json({ error: 'Invalid Moyasar payment notification.' });
   try {
