@@ -421,7 +421,7 @@ router.post('/orders/payment/webhook', paymentWebhookLimiter, async (req, res) =
   }
   const authorization = req.get('authorization') || '';
   const tokenMatch = /^Bearer ([^\s]+)$/i.exec(authorization);
-  const providedToken = tokenMatch ? Buffer.from(tokenMatch[1]) : Buffer.alloc(0);
+  const providedToken = Buffer.from(String(req.body?.secret_token || (tokenMatch && tokenMatch[1]) || ''));
   const expectedToken = Buffer.from(webhookSecret);
   if (providedToken.length !== expectedToken.length || !timingSafeEqual(providedToken, expectedToken)) {
     return res.status(401).json({ error: 'Invalid webhook token.' });
