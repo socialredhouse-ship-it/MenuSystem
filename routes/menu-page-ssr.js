@@ -1,3 +1,5 @@
+const { outlineCssVars } = require('../db/outlines');
+
 const CARD_FONTS = {
   poppins: "'Poppins',sans-serif",
   naskh: "'Noto Naskh Arabic','Poppins',sans-serif",
@@ -181,6 +183,8 @@ function designCss(design, language) {
   if (/^#[0-9a-f]{6}$/i.test(design.chip_outline_color || '')) {
     vars.push(`--chip-line:${design.chip_outline_color}`, `--chip-line-w:${Math.min(4, Math.max(1, Number(design.chip_outline_width) || 1))}px`);
   }
+  // Admin > Menu design > Outlines: only the groups that are switched on send variables, so everything else keeps its look.
+  vars.push(...outlineCssVars(design.outlines));
   const ratio = Number(design.global_card_design?.aspect_ratio);
   if (Number.isFinite(ratio) && ratio >= 1.5 && ratio <= 4) vars.push(`--menu-card-ratio:${ratio}`);
   const defaultAdd = { en: 0, ar: 2, ur: 0, zh: 0 }[language] || 0;

@@ -196,6 +196,23 @@
   .check-fields{display:flex; flex-wrap:wrap; gap:18px; margin:14px 0;}
   .check-fields label{display:flex; align-items:center; gap:7px; color:var(--text); font-size:13px;}
   .check-fields input{width:16px; height:16px; margin:0; accent-color:var(--gold);}
+  /* Menu design > Outlines: one row per named element group */
+  .outline-row{display:grid; grid-template-columns:minmax(0,1.7fr) 74px auto 120px; gap:10px 16px; align-items:center; padding:12px 0; border-top:1px solid var(--line);}
+  .outline-row .outline-on{display:flex; align-items:flex-start; gap:9px; color:var(--text); font-size:13px;}
+  .outline-row .outline-on input{width:16px; height:16px; margin:2px 0 0; accent-color:var(--gold); flex-shrink:0;}
+  .outline-row .outline-on small{display:block; margin-top:2px; color:var(--muted); font-size:11px; font-weight:500; line-height:1.4;}
+  .outline-row .outline-color input{padding:2px; height:32px; cursor:pointer;}
+  .outline-widths{display:flex; gap:5px; flex-wrap:wrap;}
+  .outline-w{width:30px; height:30px; padding:0; border-radius:5px; background:var(--bg); color:var(--muted); font:inherit; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+  .outline-w.sel{background:rgba(227,178,60,.16); color:var(--text);}
+  .outline-sample{display:flex; align-items:center; justify-content:center; width:100%; height:36px; color:var(--text); font-size:12px; font-weight:650; background:var(--bg);}
+  .outline-sample.shape-field{border-radius:10px; justify-content:flex-start; padding-inline:10px; color:var(--muted); font-weight:500;}
+  .outline-sample.shape-button{border-radius:12px;}
+  .outline-sample.shape-round{width:36px; border-radius:50%;}
+  .outline-sample.shape-total{border-radius:10px; justify-content:space-between; padding-inline:12px;}
+  .outline-sample.shape-box{border-radius:12px;}
+  .outline-row.is-off .outline-widths, .outline-row.is-off .outline-color{opacity:.45;}
+  @media (max-width:900px){ .outline-row{grid-template-columns:minmax(0,1fr) 74px;} .outline-widths,.outline-sample-wrap{grid-column:1 / -1;} }
   .image-tools{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; margin-top:14px;}
   .logo-size-controls{display:grid; gap:10px; margin-top:14px;}
   .logo-size-row{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px;}
@@ -666,6 +683,13 @@
           <label><input type="checkbox" id="bold_includes"> <span>"This meal automatically includes" text (pop-up)</span></label>
         </div>
         <div class="form-actions"><button class="action-btn primary" id="styleSave" type="submit">Save style settings</button><button class="action-btn" id="styleReset" type="button">Reset category colors</button><span class="form-note" id="styleNote" role="status"></span></div>
+      </form>
+
+      <form class="manager-form" id="outlineForm" novalidate style="margin-top:22px;">
+        <h3 style="margin:0 0 6px;">Outlines: text fields, buttons and total boxes</h3>
+        <p class="form-note" style="margin:0 0 12px;">Tick a group to give it an outline, pick a color and click a thickness (1 to 8 px, each square shows that thickness). The box on the right is a live preview. A group that is not ticked keeps its original look. The category boxes, the card border and the homepage buttons have their own outline settings in their own sections.</p>
+        <div id="outlineRows"></div>
+        <div class="form-actions"><button class="action-btn primary" id="outlineSave" type="submit">Save outlines</button><button class="action-btn" id="outlineReset" type="button">Switch all outlines off</button><span class="form-note" id="outlineNote" role="status"></span></div>
       </form>
     </section>
 
@@ -2126,6 +2150,7 @@ function showDesignSettings(design){
   showLanguageSettings(design);
   showGlobalTextStyleSettings(design);
   showStyleSettings(design);
+  showOutlineSettings(design);
 }
 
 function showBrandSettings(design){
@@ -2319,6 +2344,118 @@ document.getElementById('styleReset').addEventListener('click', () => {
   document.getElementById('chipFillColor').value = '#1c1a18';
   document.getElementById('chipActiveColor').value = '#e3b23c';
   document.getElementById('styleForm').requestSubmit();
+});
+
+/* ---------- Outlines: a named list of element groups (saved in menu_design.outlines, no database change) ---------- */
+// Keep the keys in step with OUTLINE_KEYS in db/outlines.js and the --ol-<key>-w / -c names in menu-page.html.
+const OUTLINE_GROUPS = [
+  { key:'fields',     name:'Text fields',                         shape:'field',  hint:'Every input box and text area: name, phone, address, email, password, promo code, location search.' },
+  { key:'mainbtn',    name:'Main buttons',                        shape:'button', hint:'Checkout, Pay, Login, Save, Track order, Browse the menu.' },
+  { key:'secondbtn',  name:'Second buttons',                      shape:'button', hint:'Register, Log out, Cancel payment.' },
+  { key:'promobtn',   name:'Promo "Apply" button',                shape:'button', hint:'The Apply button next to the promo code box at checkout.' },
+  { key:'locbtn',     name:'Location buttons',                    shape:'button', hint:'Use my location, Search, Pick up from the restaurant.' },
+  { key:'contactbtn', name:'Contact buttons',                     shape:'button', hint:'Chat on WhatsApp and Open in Maps.' },
+  { key:'dishadd',    name:'"Add to cart" on the dish card',      shape:'button', hint:'The small button in the corner of each dish card.' },
+  { key:'itemadd',    name:'"Add to cart" in the dish pop-up',    shape:'button', hint:'The big button at the bottom of the dish pop-up.' },
+  { key:'iconbtn',    name:'Round close / back buttons',          shape:'round',  hint:'The round X and back arrow buttons on the pop-ups and pages.' },
+  { key:'paybox',     name:'Payment method box',                  shape:'box',    hint:'The box that shows the payment method at checkout.' },
+  { key:'total',      name:'Total boxes',                         shape:'total',  hint:'The Total line in the basket and at checkout. An outline adds a small rounded box around it.' },
+];
+const OUTLINE_DEFAULT = { on:false, w:1, c:'#e3b23c' };
+let outlineState = {};
+
+function outlineNormalize(saved){
+  const state = {};
+  for(const group of OUTLINE_GROUPS){
+    const item = (saved && typeof saved === 'object' && saved[group.key]) || {};
+    const width = Number(item.w);
+    state[group.key] = {
+      on: item.on === true,
+      w: Number.isInteger(width) && width >= 0 && width <= 8 ? width : OUTLINE_DEFAULT.w,
+      c: /^#[0-9a-f]{6}$/i.test(item.c || '') ? item.c.toLowerCase() : OUTLINE_DEFAULT.c,
+    };
+  }
+  return state;
+}
+
+function outlineRowHtml(group){
+  const widths = [1,2,3,4,5,6,7,8].map(n => `<button type="button" class="outline-w" data-w="${n}" title="${n} px" aria-label="${n} px"><span>${n}</span></button>`).join('');
+  const sample = group.shape === 'total' ? '<span>Total</span><span>45</span>' : group.shape === 'round' ? '&times;' : group.shape === 'field' ? 'Sample text' : 'Sample';
+  return `<div class="outline-row" data-key="${group.key}">
+    <label class="outline-on"><input type="checkbox" data-ol="on"><span><b>${group.name}</b><small>${group.hint}</small></span></label>
+    <label class="outline-color">Color<input type="color" data-ol="c" value="${OUTLINE_DEFAULT.c}"></label>
+    <div class="outline-widths" role="group" aria-label="Thickness in px">${widths}</div>
+    <div class="outline-sample-wrap"><div class="outline-sample shape-${group.shape}">${sample}</div></div>
+  </div>`;
+}
+
+// Redraws one row (thickness squares + preview) from outlineState, without rebuilding it, so a color picker stays open while it is dragged.
+function outlinePaintRow(row){
+  const state = outlineState[row.dataset.key];
+  row.classList.toggle('is-off', !state.on);
+  row.querySelector('[data-ol="on"]').checked = state.on;
+  row.querySelector('[data-ol="c"]').value = state.c;
+  row.querySelectorAll('.outline-w').forEach(button => {
+    const width = Number(button.dataset.w);
+    button.classList.toggle('sel', width === state.w);
+    button.style.border = `${width}px solid ${state.c}`;
+  });
+  const sample = row.querySelector('.outline-sample');
+  sample.style.border = state.on ? `${state.w}px solid ${state.c}` : '1px solid var(--line)';
+  sample.style.opacity = state.on ? '1' : '.55';
+}
+
+function showOutlineSettings(design){
+  outlineState = outlineNormalize(design && design.outlines);
+  const host = document.getElementById('outlineRows');
+  host.innerHTML = OUTLINE_GROUPS.map(outlineRowHtml).join('');
+  host.querySelectorAll('.outline-row').forEach(outlinePaintRow);
+}
+
+document.getElementById('outlineRows').addEventListener('input', event => {
+  const row = event.target.closest('.outline-row');
+  const field = event.target.dataset && event.target.dataset.ol;
+  if(!row || !field) return;
+  const state = outlineState[row.dataset.key];
+  if(field === 'on') state.on = event.target.checked;
+  if(field === 'c') state.c = event.target.value;
+  outlinePaintRow(row);
+});
+
+document.getElementById('outlineRows').addEventListener('click', event => {
+  const button = event.target.closest('.outline-w');
+  const row = event.target.closest('.outline-row');
+  if(!button || !row) return;
+  const state = outlineState[row.dataset.key];
+  state.w = Number(button.dataset.w);
+  state.on = true;   // choosing a thickness means the outline is wanted
+  outlinePaintRow(row);
+});
+
+document.getElementById('outlineForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = document.getElementById('outlineSave');
+  button.disabled = true;
+  setFormNote('outlineNote', 'Saving...');
+  try{
+    const result = await adminRequest('/design/outlines', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ outlines: outlineState }),
+    });
+    showOutlineSettings(result.design);
+    setFormNote('outlineNote', 'Saved. Refresh the menu page to see it.');
+  }catch(error){
+    setFormNote('outlineNote', error.message || 'Could not save the outline settings.', true);
+  }finally{
+    button.disabled = false;
+  }
+});
+
+document.getElementById('outlineReset').addEventListener('click', () => {
+  for(const group of OUTLINE_GROUPS) outlineState[group.key].on = false;
+  document.querySelectorAll('#outlineRows .outline-row').forEach(outlinePaintRow);
+  document.getElementById('outlineForm').requestSubmit();
 });
 
 /* ---------- Homepage tab: text under the logo + menu button look (saved in menu_design.homepage) ---------- */

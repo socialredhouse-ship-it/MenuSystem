@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const { requireAdmin } = require('../middleware/auth');
 const supabase = require('../db/supabase');
+const { cleanOutlines } = require('../db/outlines');
 
 const router = express.Router();
 const SETTINGS_KEY = 'menu_design';
@@ -63,6 +64,8 @@ const DEFAULTS = {
   chip_outline_color: '', chip_outline_width: 1,
   chip_fill_color: '#1c1a18', chip_active_color: '#e3b23c',
   bold: {},
+  // Admin > Menu design > Outlines: { fields: { on, w, c }, mainbtn: {...}, ... }. {} = nothing saved, every element keeps its original look.
+  outlines: {},
 };
 const BOLD_KEYS = ['name', 'price', 'add_to_cart', 'categories', 'description', 'includes'];
 
@@ -431,6 +434,21 @@ router.put('/admin/design/style', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Could not save style settings:', error.message);
     res.status(500).json({ error: 'Could not save the style settings.' });
+  }
+});
+
+// Outlines for text fields, buttons and total boxes (a named list in Admin > Menu design > Outlines).
+router.put('/admin/design/outlines', requireAdmin, async (req, res) => {
+  const result = cleanOutlines(req.body?.outlines);
+  if (!result.ok) return res.status(400).json({ error: result.message });
+  try {
+    const design = await readDesign();
+    design.outlines = result.value;
+    await writeDesign(design);
+    res.json({ design });
+  } catch (error) {
+    console.error('Could not save outline settings:', error.message);
+    res.status(500).json({ error: 'Could not save the outline settings.' });
   }
 });
 
