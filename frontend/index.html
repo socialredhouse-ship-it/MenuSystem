@@ -137,7 +137,7 @@
 
   <!-- C: 4-second autoplay loop. No scrub, no scroll control. -->
   <section class="sec-c">
-    <video id="heroVideo" src="demo/hero.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <video id="heroVideo" autoplay muted loop playsinline preload="auto"></video>
     <!-- sound toggle for the hero's own audio (the clip autoplays muted; sound starts on the first tap or this button) -->
     <button class="sound-fab hint" id="soundFab" type="button" data-hero-sound aria-pressed="false"></button>
   </section>
@@ -258,11 +258,10 @@ document.querySelectorAll('.pill').forEach(function(a){
   });
 });
 
-/* Use the bundled video immediately, replacing it with the configured hero video when available. */
+/* Keep the hero black until its configured video is available; there is no bundled-video fallback. */
 (async function(){
   var v = document.getElementById('heroVideo');
-  var DEFAULT_SRC = 'demo/hero.mp4';
-  var src = DEFAULT_SRC;
+  var src = null;
   try{
     var ctl = new AbortController(), t = setTimeout(function(){ ctl.abort(); }, 1500);
     var r = await fetch('/api/banner', { cache:'no-store', signal:ctl.signal });
@@ -271,17 +270,16 @@ document.querySelectorAll('.pill').forEach(function(a){
       var m = await r.json();
       if(m.heroUrl) src = m.heroUrl;
     }
-  }catch(_){ /* API slow or down: use the bundled clip */ }
-  v.addEventListener('error', function(){
-    if(v.dataset.fb) return;
-    v.dataset.fb = '1'; v.src = DEFAULT_SRC; v.load();
-  });
+  }catch(_){ /* API slow or down: leave the hero black. */ }
   v.muted = true;
-  if(v.src !== new URL(src, document.baseURI).href) v.src = src;
+  if(src) v.src = src;
   var go = function(){ var p = v.play(); if(p && p.catch) p.catch(function(){}); };
-  go();
-  ['touchstart','pointerdown'].forEach(function(e){ addEventListener(e, go, { once:true, passive:true }); });
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) go(); });
+  if(src){
+    v.load();
+    go();
+    ['touchstart','pointerdown'].forEach(function(e){ addEventListener(e, go, { once:true, passive:true }); });
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) go(); });
+  }
 })();
 
 /* hero sound: the clip keeps its original audio but must autoplay muted (browser rule). Sound turns on with the
