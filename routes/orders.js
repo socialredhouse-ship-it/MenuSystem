@@ -427,6 +427,14 @@ router.post('/orders/payment/webhook', paymentWebhookLimiter, async (req, res) =
     return res.status(401).json({ error: 'Invalid webhook token.' });
   }
 
+  // Moyasar's "Verify Webhook" step posts a 6-digit code in data.verification_code (valid for 30 minutes).
+  // It is not a payment, so log it for the owner to type into the Moyasar dashboard and acknowledge it.
+  const verificationCode = req.body?.data?.verification_code;
+  if (verificationCode != null) {
+    console.log(`[MOYASAR] Webhook verification code: ${String(verificationCode).slice(0, 12)}`);
+    return res.json({ received: true });
+  }
+
   const paymentId = String(req.body?.payment?.id || req.body?.data?.object?.id || req.body?.data?.id || req.body?.payment_id || req.body?.id || '');
   if (!UUID_PATTERN.test(paymentId)) return res.status(400).json({ error: 'Invalid Moyasar payment notification.' });
   try {
